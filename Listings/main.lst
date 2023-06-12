@@ -1,0 +1,144 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              06/12/2023 22:02:07 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\2023stuffs\Keil\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listi
+                    -ngs\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "main.h"
+   2          #include "lcd12864.h"
+   3          #include "imgarr.h"
+   4          
+   5          /**
+   6           * @brief 定义小恐龙结构体
+   7           *
+   8           */
+   9          typedef struct KongLong
+  10          {
+  11            uint8 x, y;   // x,y 坐标
+  12            uint8 *image; // 图像数组
+  13          } KongLong;     // 把 struct Konglong 定义成了 Konglong
+  14          
+  15          // 定义一个实例
+  16          KongLong konglongBo = {0, 0, img_konglong};
+  17          
+  18          /// @brief 一些变量
+  19          uint16 counter1 = 0;
+  20          uint16 counter2 = 0;
+  21          
+  22          /**
+  23           * @brief 初始化定时器
+  24           *
+  25           */
+  26          void initializeTimer()
+  27          {
+  28   1        TMOD = 0x01;       // 使用模式一
+  29   1        TL0 = 64535 % 256 + 1; // 1ms 中断一次
+  30   1        TH0 = 64535 / 256;
+  31   1      
+  32   1        TF0 = 0;
+  33   1        TR0 = 1; // 定时器0 开始
+  34   1      
+  35   1        ET0 = 1; // 允许定时器0
+  36   1        EA = 1;  // 允许定时
+  37   1        PT0 = 0; // 低优先级
+  38   1      }
+  39          
+  40          /**
+  41           * @brief 定时器 0
+  42           *
+  43           */
+  44          void onTimer1() interrupt 0
+  45          {
+  46   1        // counter 用于计数
+  47   1        ++counter2;
+  48   1      
+  49   1        TL0 = 64535 % 256 + 1; // 重新装初值
+  50   1        TH0 = 64535 / 256;
+  51   1      
+  52   1        if (counter2 >= 500)
+  53   1        {
+  54   2          ++konglongBo.x;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/12/2023 22:02:07 PAGE 2   
+
+  55   2        }
+  56   1      
+  57   1        // TODO: 判断按键是否按下
+  58   1      
+  59   1        // TODO: 更新小恐龙的横坐标
+  60   1      
+  61   1        // TODO: 如果小恐龙未站在小板块上，那还需要更新小恐龙的纵坐标
+  62   1      
+  63   1        // TODO: 生成新的小块
+  64   1      }
+  65          
+  66          /**
+  67           * @brief 定时器 1
+  68           *
+  69           */
+  70          void onTimer2()
+  71          {
+  72   1        // TODO: 更新小板块的坐标
+  73   1      
+  74   1        // TODO: 判断是否需要更改定时器初值，让小板块越来越快
+  75   1      }
+  76          
+  77          void main(void)
+  78          {
+  79   1        // 初始化定时器
+  80   1        initializeTimer();
+  81   1      
+  82   1        // 初始化屏幕
+  83   1        LCD_init();
+  84   1        delay(5);
+  85   1      
+  86   1        while (1)
+  87   1        {
+  88   2          // TODO: 计算绘图地址
+  89   2          // TODO: 绘图
+  90   2          ++counter1;
+  91   2      
+  92   2          drawPicture16(konglongBo.x, konglongBo.y, konglongBo.image);
+  93   2      
+  94   2          if (counter1 > 20)
+  95   2          {
+  96   3            counter1 = 0;
+  97   3            ++konglongBo.x;
+  98   3          }
+  99   2        }
+ 100   1      }
+ 101          
+ 102          /**
+ 103           * @brief 毫秒延迟
+ 104           *
+ 105           * @param n
+ 106           */
+ 107          void delay(uint16 n) // 延时ms级
+ 108          {
+ 109   1        uint8 counter;
+ 110   1        while (n--)
+ 111   1        {
+ 112   2          counter = 110;
+ 113   2          while (--counter)
+ 114   2            ;
+ 115   2        }
+ 116   1      }
+C51 COMPILER V9.60.7.0   MAIN                                                              06/12/2023 22:02:07 PAGE 3   
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    130    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     41    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

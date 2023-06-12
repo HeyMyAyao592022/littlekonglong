@@ -1,0 +1,5 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\lcd12864.obj" 
+TO ".\Objects\drawft" 
+PRINT(".\Listings\drawft.m51") RAMSIZE(256) 

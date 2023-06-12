@@ -1,0 +1,13 @@
+C51 COMPILER V9.60.7.0   LCD                                                               06/12/2023 16:26:10 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE LCD
+OBJECT MODULE PLACED IN .\Objects\LCD.obj
+COMPILER INVOKED BY: D:\2023stuffs\Keil\C51\BIN\C51.EXE LCD.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listin
+                    -gs\LCD.lst) TABS(2) OBJECT(.\Objects\LCD.obj)
+
+line level    source
+
+*** ERROR C318 OF LCD.c: can't open file 'LCD.c'
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)
