@@ -213,89 +213,101 @@ void drawPicture8(uint8 x, uint8 y, uint8 *addr)
 			dat_w12864(0xFF - *addr++);
 }
 
-void drawPicture16(uint8 x, uint8 y, uint8 *addr)
+void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical)
 {
-	uint8 i;										// 遍历
-	uint8 offset;									// 如果图像横跨左右屏幕，可以用于辅助计算
-	uint8 *img_ptr = NULL;							// 如果图像横跨左右屏幕，可以用 img_ptr 保存 addr 原始地址
-	uint8 crossScreen = (x > 47 && x < 63) ? 1 : 0; // 判断图像是否横跨左右屏幕
+	uint8 i;
+	uint8 crossedScreen = x == 63 ? 1 : 0;
+	uint8 crossingScreen = 0;
 
-	// 横坐标超过 63，就显示到右半屏幕
-	if (x < 63)
-		choose12864(0);
-	else if (x < 112)
+	if (x > 47 && x < 63)
+	{
+		switch (dir_horizon)
+		{
+		case DIR_LEFT:
+			crossingScreen = 1;
+			break;
+		case DIR_RIGHT:
+			crossingScreen = 2;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (x > 63)
 	{
 		choose12864(1);
 		x = x - 64;
 	}
 	else
-		return;
+		choose12864(0);
 
-	// 定位到上半部
 	cmd_w12864(0x40 | x);
 	cmd_w12864(0xb8 | y);
 
-	// 写入上半部分
-	// if 判断是否跨越左右半屏
-	if (!crossScreen)
-		for (i = 0; i < 16; i++)
-			dat_w12864(*addr++);
-	else
+	if ((y & 0x80) == 0)
 	{
-		// 跨屏幕的话，就先写左屏幕部分
-		offset = 63 - x;
-		// 用 img_ptr 保存 addr 原始地址
-		img_ptr = addr;
-		for (i = 0; i < offset; i++)
-			dat_w12864(*addr++);
-		for (i = 0; i < 8 - offset; i++)
-			dat_w12864(0x00);
+		switch (crossingScreen)
+		{
+		case 0:
+			for (i = 0; i < 16; i++)
+				dat_w12864(addr[i]);
+			break;
+		case 1:
+			break;
+		case 2:
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(addr[i]);
+			break;
+		default:
+			break;
+		}
 	}
+	else
+		for (i = 0; i < 16; i++)
+			dat_w12864(0xFF - addr[i]);
 
-	// 定位到下半部分
+	// 下半部分
 	cmd_w12864(0x40 | x);
 	cmd_w12864(0xb8 | (y + 1));
 
-	// 写入下半部分
-	// if 判断是否跨越左右半屏
-	if (!crossScreen)
-		for (i = 0; i < 16; i++)
-			dat_w12864(*addr++);
-	else
+	if ((y & 0x80) == 0)
 	{
-		// 跨屏幕的话，就先写左屏幕部分
-		addr = img_ptr + 8;
-		for (i = 0; i < offset; i++)
-			dat_w12864(*addr++);
-		for (i = 0; i < 8 - offset; i++)
+		switch (crossingScreen)
+		{
+		case 0:
+			for (i = 0; i < 16; i++)
+				dat_w12864(addr[i + 16]);
+			break;
+		case 1:
+			break;
+		case 2:
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(addr[i + 16]);
+			break;
+		default:
+			break;
+		}
+	}
+	else
+		for (i = 0; i < 16; i++)
+			dat_w12864(0xFF - addr[i + 16]);
+
+	// 横跨左右屏幕
+	if (crossedScreen)
+	{
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | y);
+
+		for (i = 0; i < 16; i++)
+			dat_w12864(0x00);
+
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (y + 1));
+
+		for (i = 0; i < 16; i++)
 			dat_w12864(0x00);
 	}
-
-	// 如果跨左右屏幕，那就执行下面的程序
-	if (!crossScreen)
-		return;
-
-	// // 写右屏幕的部分
-	// choose12864(1);
-	// x = 0;
-
-	// // 定位到上半部
-	// cmd_w12864(0x40);
-	// cmd_w12864(0xb8 | y);
-
-	// addr = img_ptr + offset;
-	// // 写入上半部分
-	// for (i = offset; i < 16; i++)
-	// 	dat_w12864(*addr++);
-
-	// // 定位到下半部分
-	// cmd_w12864(0x40 | x);
-	// cmd_w12864(0xb8 | (y + 1));
-
-	// addr = img_ptr + offset + 8;
-	// // 写入下半部分
-	// for (i = offset; i < 16; i++)
-	// 	dat_w12864(*addr++);
 }
 
 void clearObject(uint8 x, uint8 y)

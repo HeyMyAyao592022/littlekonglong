@@ -53,10 +53,11 @@ void drawPicture8(uint8 x, uint8 y, uint8 *addr);
 /**
  * @brief 绘图 16x16
  *
- * @param x
- * @param y
- * @param addr
+ * @param x x 坐标 0~127
+ * @param y y 坐标 0~3
+ * @param addr 图像数组
+ * @param dir 方向
  */
-void drawPicture16(uint8 x, uint8 y, uint8 *addr);
+void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical);
 
 #endif
