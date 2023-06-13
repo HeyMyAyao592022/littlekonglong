@@ -213,10 +213,29 @@ void drawPicture8(uint8 x, uint8 y, uint8 *addr)
 			dat_w12864(0xFF - *addr++);
 }
 
+/**
+ * @brief
+ * 图像的 y 坐标并不是屏幕的实际 y 坐标，屏幕纵方向被分为了 8 段，每段有 8 行，共 64 个像素。
+ * 我们每次向屏幕写入一个 8位16进制数据，那这个数据就会在屏幕上形成 纵方向的8个小点。（刚好是 16x16 图像高度的一半）
+ * 一般我们要在 （screen_x,screen_y) 的地方写入 16x16 的图片，
+ * 都是先在 (screen_x,screen_y)写上半部分，写入 8 个8位16进制数据，构成图像的上半部分，
+ * 然后再在 (screen_x,screen_y + 1)写入下半部分。
+ * 假如图像的 y 坐标刚好是 8 的倍数，比如 16，那 16x16 的图像刚好可以被放在屏幕 y 坐标为 2 的位置。
+ * 如果图像的 y 坐标不是 8 的倍数，比如 18，那我们就需要把图像分成 3 段，并通过负责的运算把图像放到屏幕上。
+ *
+ * @param x 0~127
+ * @param y 0~63
+ * @param addr
+ * @param dir_horizon
+ * @param dir_vertical
+ */
 void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical)
 {
+
+	int8 screen_y = y / 8;		 // 算出 y 对应屏幕的 y 坐标
+	int8 offset_y = 8 - (y % 8); // 算出 y 对 screen_y 的偏移
+
 	uint8 i;
-	uint8 crossedScreen = x == 63 ? 1 : 0;
 	uint8 crossingScreen = 0;
 
 	if (x > 47 && x < 63)
@@ -239,14 +258,21 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 		choose12864(1);
 		x = x - 64;
 	}
+	else if (x == 63)
+	{
+		choose12864(1);
+		x = 0;
+	}
 	else
 		choose12864(0);
 
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | y);
-
-	if ((y & 0x80) == 0)
+	// offset 为 0 就正常显示图片
+	if (!offset_y)
 	{
+
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | screen_y);
+
 		switch (crossingScreen)
 		{
 		case 0:
@@ -262,17 +288,11 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 		default:
 			break;
 		}
-	}
-	else
-		for (i = 0; i < 16; i++)
-			dat_w12864(0xFF - addr[i]);
 
-	// 下半部分
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | (y + 1));
+		// 下半部分
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 1));
 
-	if ((y & 0x80) == 0)
-	{
 		switch (crossingScreen)
 		{
 		case 0:
@@ -289,24 +309,39 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 			break;
 		}
 	}
+	// 否则，一张图片要拆分成3段
 	else
-		for (i = 0; i < 16; i++)
-			dat_w12864(0xFF - addr[i + 16]);
-
-	// 横跨左右屏幕
-	if (crossedScreen)
 	{
-		cmd_w12864(0x40 | x);
-		cmd_w12864(0xb8 | y);
+		// 先取上面第1段
+		uint8 seg1[16] = {0x00};
+		uint8 seg2[16] = {0x00};
+		uint8 seg3[16] = {0x00};
 
+		// 构造这3段新数据
 		for (i = 0; i < 16; i++)
-			dat_w12864(0x00);
+		{
+			seg1[i] = seg1[i] | (addr[i] << (8 - offset_y));
+			seg2[i] = (addr[i] >> offset_y) | (addr[i + 16] << (8 - offset_y));
+			seg3[i] = addr[i + 16] >> offset_y;
+		}
 
+		// 先画第一段
 		cmd_w12864(0x40 | x);
-		cmd_w12864(0xb8 | (y + 1));
-
+		cmd_w12864(0xb8 | (screen_y));
 		for (i = 0; i < 16; i++)
-			dat_w12864(0x00);
+			dat_w12864(seg1[i]);
+
+		// 再画第二段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 1));
+		for (i = 0; i < 16; i++)
+			dat_w12864(seg2[i]);
+
+		// 再画第三段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 2));
+		for (i = 0; i < 16; i++)
+			dat_w12864(seg3[i]);
 	}
 }
 

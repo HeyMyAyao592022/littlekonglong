@@ -16,7 +16,7 @@ typedef struct KongLong
 } KongLong; // 把 struct Konglong 定义成了 Konglong
 
 // 定义一个实例
-KongLong konglongBo = {0, 1, img_konglong, DIR_RIGHT, -1};
+KongLong konglongBo = {0, 6, rec_frame, DIR_STILL, DIR_DOWN};
 
 /// @brief 一些变量
 uint16 counter1 = 0;
@@ -52,16 +52,16 @@ void onTimer1() interrupt 1
 	TL0 = (65535 - 9216) % 256;
 
 	// 每50ms
-	if (timer0_counter1 >= 5)
+	if (timer0_counter1 >= 10)
 	{
 		// 更新小恐龙水平位移
 		switch (konglongBo.horizon_direction)
 		{
-		case 0: // 向左
+		case DIR_LEFT: // 向左
 			if (konglongBo.x != 0)
 				--konglongBo.x;
 			break;
-		case 1: // 向右
+		case DIR_RIGHT: // 向右
 			if (konglongBo.x != 111)
 				++konglongBo.x;
 			break;
@@ -71,16 +71,17 @@ void onTimer1() interrupt 1
 		// 更新小恐龙垂直位移
 		switch (konglongBo.vertical_direction)
 		{
-		case 0: // 向上
+		case DIR_UP: // 向上
 			++konglong_counter1;
-			++konglongBo.y;
+			--konglongBo.y;
 			if (konglong_counter1 == 10)
 			{
 				konglong_counter1 = 0;
 				konglongBo.vertical_direction = 1;
 			}
 			break;
-		case 1: // 向下
+		case DIR_DOWN: // 向下
+			++konglongBo.y;
 			break;
 		default:
 			break;

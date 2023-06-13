@@ -13,6 +13,7 @@
 #define DIR_RIGHT 1
 #define DIR_UP 0
 #define DIR_DOWN 1
+#define DIR_STILL -1
 
 typedef unsigned char uint8;
 typedef unsigned int uint16;
