@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 13:06:38 PAGE 1   
+C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 20:40:18 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
@@ -22,153 +22,205 @@ line level    source
   12            uint8 *image;      // 图像数组
   13            int8 horizon_direction;  // 左右方向，-1 保存水平, 0左 1 右
   14            int8 vertical_direction; // 上下方向, -1 保持垂直，0 上，1下, 2 站在小板块上
-  15          
-  16          } KongLong; // 把 struct Konglong 定义成了 Konglong
-  17          
-  18          // 定义一个实例
-  19          KongLong konglongBo = {0, 6, rec_frame, DIR_STILL, DIR_DOWN};
-  20          
-  21          /// @brief 一些变量
-  22          uint16 counter1 = 0;
-  23          uint16 timer0_counter1 = 0;
-  24          uint8 konglong_counter1 = 0;
+  15          } KongLong;          // 把 struct Konglong 定义成了 Konglong
+  16          
+  17          /**
+  18           * @brief 定义小板块
+  19           *
+  20           */
+  21          typedef struct Block
+  22          {
+  23            uint8 x, y;
+  24          } Block;
   25          
-  26          /**
-  27           * @brief 初始化定时器
-  28           *
-  29           */
-  30          void initializeTimer()
-  31          {
-  32   1        TMOD = 0x01;        // 使用模式一
-  33   1        TL0 = (65535 - 9216) % 256; // 10ms 中断一次
-  34   1        TH0 = (65535 - 9216) / 256;
-  35   1      
-  36   1        TR0 = 1; // 定时器0 开始
-  37   1        ET0 = 1; // 允许定时器0
-  38   1        EA = 1;  // 允许定时
-  39   1        PT0 = 0; // 低优先级
-  40   1      }
-  41          
-  42          /**
-  43           * @brief 定时器 0
-  44           *
-  45           */
-  46          void onTimer1() interrupt 1
-  47          {
-  48   1        // counter 用于计数
-  49   1        ++timer0_counter1;
-  50   1      
-  51   1        TH0 = (65535 - 9216) / 256; // 10ms溢出中断
-  52   1        TL0 = (65535 - 9216) % 256;
-  53   1      
-  54   1        // 每50ms
-C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 13:06:38 PAGE 2   
+  26          /// @brief 小恐龙实例
+  27          KongLong konglongBo = {0, 8, img_konglong, DIR_RIGHT, DIR_STILL};
+  28          
+  29          /// @brief 小板块
+  30          Block blocks[] = {{88, BLCOK_MAX_Y}};
+  31          
+  32          /// @brief 一些变量
+  33          uint16 counter1 = 0;
+  34          uint8 timer0_counter1 = 0;
+  35          uint8 timer0_counter2 = 0;
+  36          uint8 konglong_counter1 = 0;
+  37          uint8 blocksNumber = 1;
+  38          uint8 blockMovingInterval = 10;
+  39          
+  40          /**
+  41           * @brief 初始化定时器
+  42           *
+  43           */
+  44          void initializeTimer()
+  45          {
+  46   1        TMOD = 0x01;        // 使用模式一
+  47   1        TL0 = (65535 - 9216) % 256; // 10ms 中断一次
+  48   1        TH0 = (65535 - 9216) / 256;
+  49   1      
+  50   1        TR0 = 1; // 定时器0 开始
+  51   1        ET0 = 1; // 允许定时器0
+  52   1        EA = 1;  // 允许定时
+  53   1        PT0 = 0; // 低优先级
+  54   1      }
+C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 20:40:18 PAGE 2   
 
-  55   1        if (timer0_counter1 >= 10)
-  56   1        {
-  57   2          // 更新小恐龙水平位移
-  58   2          switch (konglongBo.horizon_direction)
-  59   2          {
-  60   3          case DIR_LEFT: // 向左
-  61   3            if (konglongBo.x != 0)
-  62   3              --konglongBo.x;
-  63   3            break;
-  64   3          case DIR_RIGHT: // 向右
-  65   3            if (konglongBo.x != 111)
-  66   3              ++konglongBo.x;
-  67   3            break;
-  68   3          default:
-  69   3            break;
-  70   3          }
-  71   2          // 更新小恐龙垂直位移
-  72   2          switch (konglongBo.vertical_direction)
-  73   2          {
-  74   3          case DIR_UP: // 向上
-  75   3            ++konglong_counter1;
-  76   3            --konglongBo.y;
-  77   3            if (konglong_counter1 == 10)
-  78   3            {
-  79   4              konglong_counter1 = 0;
-  80   4              konglongBo.vertical_direction = 1;
-  81   4            }
+  55          
+  56          /**
+  57           * @brief 定时器 0
+  58           *
+  59           */
+  60          void onTimer1() interrupt 1
+  61          {
+  62   1        // counter 用于计数
+  63   1        ++timer0_counter1;
+  64   1        ++timer0_counter2;
+  65   1      
+  66   1        TH0 = (65535 - 9216) / 256; // 10ms溢出中断
+  67   1        TL0 = (65535 - 9216) % 256;
+  68   1      
+  69   1        // 每50ms
+  70   1        if (timer0_counter1 >= 8)
+  71   1        {
+  72   2          // 更新小恐龙水平位移
+  73   2          switch (konglongBo.horizon_direction)
+  74   2          {
+  75   3          case DIR_LEFT: // 向左
+  76   3            if (konglongBo.x > 0)
+  77   3              --konglongBo.x;
+  78   3            break;
+  79   3          case DIR_RIGHT: // 向右
+  80   3            if (konglongBo.x < 111)
+  81   3              ++konglongBo.x;
   82   3            break;
-  83   3          case DIR_DOWN: // 向下
-  84   3            ++konglongBo.y;
-  85   3            break;
-  86   3          default:
-  87   3            break;
-  88   3          }
-  89   2          // 归零
-  90   2          timer0_counter1 = 0;
-  91   2        }
-  92   1      
-  93   1        // TODO: 判断按键是否按下
-  94   1      
-  95   1        // TODO: 更新小恐龙的横坐标
-  96   1      
-  97   1        // TODO: 如果小恐龙未站在小板块上，那还需要更新小恐龙的纵坐标
-  98   1      
-  99   1        // TODO: 生成新的小块
- 100   1      }
- 101          
- 102          /**
- 103           * @brief 定时器 1
- 104           *
- 105           */
- 106          void onTimer2()
- 107          {
- 108   1        // TODO: 更新小板块的坐标
- 109   1      
- 110   1        // TODO: 判断是否需要更改定时器初值，让小板块越来越快
- 111   1      }
- 112          
- 113          void main(void)
- 114          {
- 115   1        // 初始化定时器
- 116   1        initializeTimer();
-C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 13:06:38 PAGE 3   
+  83   3          default:
+  84   3            break;
+  85   3          }
+  86   2          // 更新小恐龙垂直位移
+  87   2          switch (konglongBo.vertical_direction)
+  88   2          {
+  89   3          case DIR_UP: // 向上
+  90   3            ++konglong_counter1;
+  91   3            --konglongBo.y;
+  92   3            if (konglong_counter1 == 10)
+  93   3            {
+  94   4              konglong_counter1 = 0;
+  95   4              konglongBo.vertical_direction = 1;
+  96   4            }
+  97   3            break;
+  98   3          case DIR_DOWN: // 向下
+  99   3            ++konglongBo.y;
+ 100   3            break;
+ 101   3          default:
+ 102   3            break;
+ 103   3          }
+ 104   2          // 归零
+ 105   2          timer0_counter1 = 0;
+ 106   2        }
+ 107   1      
+ 108   1        // 更新小板块位置
+ 109   1        if (timer0_counter2 >= blockMovingInterval)
+ 110   1        {
+ 111   2          uint8 i;
+ 112   2          for (i = 0; i < blocksNumber; i++)
+ 113   2          {
+ 114   3            blocks[i].y--;
+ 115   3          }
+ 116   2          timer0_counter2 = 0;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 20:40:18 PAGE 3   
 
- 117   1      
- 118   1        // 初始化屏幕
- 119   1        LCD_init();
- 120   1        delay(5);
- 121   1      
- 122   1        while (1)
- 123   1        {
- 124   2          // TODO: 计算绘图地址
- 125   2          // TODO: 绘图
- 126   2      
- 127   2          drawPicture16(konglongBo.x, konglongBo.y, konglongBo.image, konglongBo.horizon_direction, konglongBo.ver
-             -tical_direction);
- 128   2        }
- 129   1      }
- 130          
- 131          /**
- 132           * @brief 毫秒延迟
- 133           *
- 134           * @param n
- 135           */
- 136          void delay(uint16 n) // 延时ms级
- 137          {
- 138   1        uint8 counter;
- 139   1        while (n--)
- 140   1        {
- 141   2          counter = 110;
- 142   2          while (--counter)
- 143   2            ;
- 144   2        }
- 145   1      }
+ 117   2        }
+ 118   1      
+ 119   1        // TODO: 判断按键是否按下
+ 120   1      
+ 121   1        // TODO: 更新小恐龙的横坐标
+ 122   1      
+ 123   1        // TODO: 如果小恐龙未站在小板块上，那还需要更新小恐龙的纵坐标
+ 124   1      
+ 125   1        // TODO: 生成新的小块
+ 126   1      }
+ 127          
+ 128          /**
+ 129           * @brief 定时器 1
+ 130           *
+ 131           */
+ 132          void onTimer2()
+ 133          {
+ 134   1        // TODO: 更新小板块的坐标
+ 135   1      
+ 136   1        // TODO: 判断是否需要更改定时器初值，让小板块越来越快
+ 137   1      }
+ 138          
+ 139          void main(void)
+ 140          {
+ 141   1        uint8 i;
+ 142   1      
+ 143   1        // 初始化定时器
+ 144   1        initializeTimer();
+ 145   1      
+ 146   1        // 初始化屏幕
+ 147   1        LCD_init();
+ 148   1        delay(5);
+ 149   1      
+ 150   1        // drawBlock(blocks[0].x, blocks[0].y);
+ 151   1        // drawKonglong(konglongBo.x, konglongBo.y,
+ 152   1        //       konglongBo.image, konglongBo.horizon_direction, konglongBo.vertical_direction);
+ 153   1      
+ 154   1        while (1)
+ 155   1        {
+ 156   2          // TODO: 计算绘图地址
+ 157   2          // TODO: 绘图
+ 158   2          drawKonglong(konglongBo.x, konglongBo.y,
+ 159   2                 konglongBo.image, konglongBo.horizon_direction, konglongBo.vertical_direction);
+ 160   2          // for (i = 0; i < blocksNumber; i++)
+ 161   2          // {
+ 162   2          //  drawBlock(blocks[i].x, blocks[i].y);
+ 163   2          // }
+ 164   2      
+ 165   2          // scan key
+ 166   2          if (!KeyIn1) // 向左
+ 167   2          {
+ 168   3            if (konglongBo.horizon_direction == DIR_RIGHT)
+ 169   3              clearObject(konglongBo.x, konglongBo.y);
+ 170   3            konglongBo.horizon_direction = DIR_LEFT;
+ 171   3          }
+ 172   2          else if (!KeyIn2) // 向右
+ 173   2          {
+ 174   3            if (konglongBo.horizon_direction == DIR_LEFT)
+ 175   3              clearObject(konglongBo.x, konglongBo.y);
+ 176   3            konglongBo.horizon_direction = DIR_RIGHT;
+ 177   3          }
+ 178   2        }
+C51 COMPILER V9.60.7.0   MAIN                                                              06/13/2023 20:40:18 PAGE 4   
+
+ 179   1      }
+*** WARNING C280 IN LINE 141 OF main.c: 'i': unreferenced local variable
+ 180          
+ 181          /**
+ 182           * @brief 毫秒延迟
+ 183           *
+ 184           * @param n
+ 185           */
+ 186          void delay(uint16 n) // 延时ms级
+ 187          {
+ 188   1        uint8 counter;
+ 189   1        while (n--)
+ 190   1        {
+ 191   2          counter = 110;
+ 192   2          while (--counter)
+ 193   2            ;
+ 194   2        }
+ 195   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    163    ----
+   CODE SIZE        =    232    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     50    ----
+   DATA SIZE        =     48       2
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
 
 
-C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

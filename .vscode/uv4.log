@@ -1,5 +1,5 @@
 Build target 'Target 1'
-compiling main.c...
+compiling lcd12864.c...
 linking...
 *** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
     SEGMENT: ?PR?ONTIMER2?MAIN
@@ -11,12 +11,9 @@ linking...
     SEGMENT: ?PR?_PLAY16?LCD12864
 
 *** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
-    SEGMENT: ?PR?_DRAWPICTURE8?LCD12864
+    SEGMENT: ?PR?_DRAWBLOCK?LCD12864
 
-*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
-    SEGMENT: ?PR?_CLEAROBJECT?LCD12864
-
-Program Size: data=128.0 xdata=0 code=2037
+Program Size: data=126.0 xdata=0 code=2705
 creating hex file from ".\Objects\drawft"...
-".\Objects\drawft" - 0 Error(s), 5 Warning(s).
-Build Time Elapsed:  00:00:01
+".\Objects\drawft" - 0 Error(s), 4 Warning(s).
+Build Time Elapsed:  00:00:00

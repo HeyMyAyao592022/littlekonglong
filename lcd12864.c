@@ -4,6 +4,11 @@
 
 #include "lcd12864.h"
 
+/// @brief 辅助显示图片的内存
+uint8 seg1[16] = {0x00};
+uint8 seg2[16] = {0x00};
+uint8 seg3[16] = {0x00};
+
 void chekbusy12864(void)
 {
 	uint8 dat;
@@ -175,42 +180,74 @@ void play16(uint8 x, uint8 y, uint8 *addr)
 			dat_w12864(0xFF - *addr++);
 }
 
-void drawPicture8(uint8 x, uint8 y, uint8 *addr)
+void drawBlock(uint8 x, uint8 y)
 {
+	int8 screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
+	int8 offset_y = y % 8; // 算出 y 对 screen_y 的偏移
+
+	uint8 blockDot = 0xff;
 	uint8 i;
 
-	// x>63，说明 x 在右边，选择右屏
 	if (x > 63)
 	{
 		choose12864(1);
 		x = x - 64;
 	}
+	else if (x == 63)
+	{
+		choose12864(1);
+		x = 0;
+	}
 	else
 		choose12864(0);
 
-	// 写入 x,y 位置
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | (y++));
-
-	// 确保 y 第八位为 0
-	if ((y & 0x80) == 0)
-		// 写入 8 个 8 位的 16 进制数据
-		for (i = 0; i < 8; i++)
-			dat_w12864(*addr++);
+	// offset 为 0 就正常显示图片
+	if (!offset_y)
+	{
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | screen_y);
+		for (i = 0; i < 16; i++)
+			dat_w12864(blockDot);
+	}
+	// 否则，一张图片要拆分成2段
 	else
-		for (i = 0; i < 8; i++)
-			dat_w12864(0xFF - *addr++);
+	{
+		// 构造这2段新数据
+		for (i = 0; i < 16; i++)
+		{
+			seg1[i] = seg1[i] | (blockDot << offset_y);
+			seg2[i] = (blockDot >> (8 - offset_y));
+		}
 
-	// 写入 x, y + 1
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | y);
+		// 先画第一段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y));
+		for (i = 0; i < 16; i++)
+			dat_w12864(seg1[i]);
 
-	if ((y & 0x80) == 0)
-		for (i = 0; i < 8; i++)
-			dat_w12864(*addr++);
-	else
-		for (i = 0; i < 8; i++)
-			dat_w12864(0xFF - *addr++);
+		// 再画第二段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 1));
+		for (i = 0; i < 16; i++)
+			dat_w12864(seg2[i]);
+
+		// seg 重新置零
+		for (i = 0; i < 16; i++)
+		{
+			seg1[i] = 0;
+			seg2[i] = 0;
+		}
+	}
+
+	if ((y - 1) % 8 == 0)
+	{
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 1));
+		for (i = 0; i < 16; i++)
+		{
+			dat_w12864(0x00);
+		}
+	}
 }
 
 /**
@@ -229,29 +266,274 @@ void drawPicture8(uint8 x, uint8 y, uint8 *addr)
  * @param dir_horizon
  * @param dir_vertical
  */
-void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical)
+void drawKonglong(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical)
 {
-
-	int8 screen_y = y / 8;		 // 算出 y 对应屏幕的 y 坐标
-	int8 offset_y = 8 - (y % 8); // 算出 y 对 screen_y 的偏移
+	int8 screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
+	int8 offset_y = y % 8; // 算出 y 对 screen_y 的偏移
 
 	uint8 i;
 	uint8 crossingScreen = 0;
 
+	// 判断小恐龙是否在横跨左右屏幕
 	if (x > 47 && x < 63)
 	{
 		switch (dir_horizon)
 		{
 		case DIR_LEFT:
-			crossingScreen = 1;
+			crossingScreen = 1; // 表示小恐龙正在从右向左跨屏
 			break;
 		case DIR_RIGHT:
-			crossingScreen = 2;
+			crossingScreen = 2; // 表示小恐龙正在从左向右跨屏
 			break;
 		default:
 			break;
 		}
 	}
+
+	// 选择屏幕
+	// 左屏幕往右的边界
+	if (x == 63 && dir_horizon == DIR_RIGHT)
+	{
+		choose12864(1);
+		x = 0;
+	}
+	// 右屏幕往左的边界
+	else if (x == 47 && dir_horizon == DIR_LEFT)
+	{
+		choose12864(0);
+		x = 47;
+	}
+	// x 超过63，说明在右屏幕
+	else if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	// 如果小于 63 又大于 47，且向左，则说明在由右往左横跨屏幕
+	else if (crossingScreen == 1)
+	{
+		choose12864(1);
+		// 在这个特殊情况下，x是负数
+		x = x - 63;
+	}
+	else
+		choose12864(0);
+
+	// offset 为 0 就正常显示图片
+	if (!offset_y)
+	{
+		// 如果小恐龙正在横跨左右屏幕，那需要特殊处理
+		switch (crossingScreen)
+		{
+		case 0: // 不跨屏
+			// 向右移动和向左移动不同
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | screen_y);
+			if (dir_horizon == DIR_RIGHT)
+				for (i = 0; i < 16; i++)
+					dat_w12864(addr[i]);
+			else
+				for (i = 0; i < 16; i++)
+					dat_w12864(addr[15 - i]);
+			break;
+		case 1: // 右跨左
+			// 向右移动和向左移动不同
+			cmd_w12864(0x40);
+			cmd_w12864(0xb8 | screen_y);
+			for (i = 16 + x; i < 16; i++)
+				dat_w12864(addr[15 - i]);
+			break;
+			break;
+		case 2: // 左跨右
+			// 向右移动和向左移动不同
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | screen_y);
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(addr[i]);
+			break;
+		default:
+			break;
+		}
+
+		// 下半部分
+		// 处理跨屏
+		switch (crossingScreen)
+		{
+		case 0: // 不跨屏
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			// 向右移动和向左移动不同
+			if (dir_horizon == DIR_RIGHT)
+				for (i = 0; i < 16; i++)
+					dat_w12864(addr[i + 16]);
+			else
+				for (i = 0; i < 16; i++)
+					dat_w12864(addr[31 - i]);
+			break;
+		case 1: // 右跨左
+			cmd_w12864(0x40 | 0);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			for (i = 16 + x; i < 16; i++)
+				dat_w12864(addr[31 - i]);
+			break;
+		case 2: // 左跨右
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(addr[i + 16]);
+			break;
+		default:
+			break;
+		}
+	}
+	// 否则，一张图片要拆分成3段
+	else
+	{
+		// 构造这3段新数据
+		for (i = 0; i < 16; i++)
+		{
+			seg1[i] = seg1[i] | (addr[i] << offset_y);
+			seg2[i] = (addr[i] >> (8 - offset_y)) | (addr[i + 16] << offset_y);
+			seg3[i] = addr[i + 16] >> (8 - offset_y);
+		}
+
+		switch (crossingScreen)
+		{
+		case 0: // 没有横跨屏幕
+			// 向右移动和向左移动不同
+			if (dir_horizon == DIR_RIGHT)
+			{
+				// 先画第一段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | screen_y);
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg1[i]);
+
+				// 再画第二段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | (screen_y + 1));
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg2[i]);
+
+				// 再画第三段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | (screen_y + 2));
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg3[i]);
+				break;
+			}
+			else
+			{
+				// 先画第一段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | screen_y);
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg1[15 - i]);
+
+				// 再画第二段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | (screen_y + 1));
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg2[15 - i]);
+
+				// 再画第三段
+				cmd_w12864(0x40 | x);
+				cmd_w12864(0xb8 | (screen_y + 2));
+				for (i = 0; i < 16; i++)
+					dat_w12864(seg3[15 - i]);
+				break;
+			}
+
+		case 1: // 右跨左
+			cmd_w12864(0x40);
+			cmd_w12864(0xb8 | screen_y);
+			for (i = 63 - x; i < 16; i++)
+				dat_w12864(seg1[16 - i]);
+
+			// 再画第二段
+			cmd_w12864(0x40);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			for (i = 63 - x; i < 16; i++)
+				dat_w12864(seg2[16 - i]);
+
+			// 再画第三段
+			cmd_w12864(0x40);
+			cmd_w12864(0xb8 | (screen_y + 2));
+			for (i = 63 - x; i < 16; i++)
+				dat_w12864(seg3[16 - i]);
+
+			break;
+		case 2: // 左跨右
+			// 先画第一段
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | screen_y);
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(seg1[i]);
+
+			// 再画第二段
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(seg2[i]);
+
+			// 再画第三段
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y + 2));
+			for (i = 0; i < 63 - x; i++)
+				dat_w12864(seg3[i]);
+			break;
+
+		default:
+			break;
+		}
+
+		// seg 重新置零
+		for (i = 0; i < 16; i++)
+		{
+			seg1[i] = 0;
+			seg2[i] = 0;
+			seg3[i] = 0;
+		}
+	}
+
+	// 清除残影
+	switch (dir_vertical)
+	{
+	case DIR_DOWN:
+		if ((y + 1) % 8 == 0)
+		{
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y));
+			for (i = 0; i < 16; i++)
+			{
+				dat_w12864(0x00);
+			}
+		}
+		break;
+	case DIR_UP:
+		if ((y - 1) % 8 == 0)
+		{
+			cmd_w12864(0x40 | x);
+			cmd_w12864(0xb8 | (screen_y + 1));
+			for (i = 0; i < 16; i++)
+			{
+				dat_w12864(0x00);
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void clearObject(uint8 x, uint8 y)
+{
+	int8 screen_y = y / 8;		 // 算出 y 对应屏幕的 y 坐标
+	int8 offset_y = 8 - (y % 8); // 算出 y 对 screen_y 的偏移
+
+	uint8 i;
+	uint8 crossingScreen = 0;
 
 	if (x > 63)
 	{
@@ -266,7 +548,7 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 	else
 		choose12864(0);
 
-	// offset 为 0 就正常显示图片
+	// offset 为 0 就正常清除图片
 	if (!offset_y)
 	{
 
@@ -277,13 +559,13 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 		{
 		case 0:
 			for (i = 0; i < 16; i++)
-				dat_w12864(addr[i]);
+				dat_w12864(0x00);
 			break;
 		case 1:
 			break;
 		case 2:
 			for (i = 0; i < 63 - x; i++)
-				dat_w12864(addr[i]);
+				dat_w12864(0x00);
 			break;
 		default:
 			break;
@@ -297,75 +579,33 @@ void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_ver
 		{
 		case 0:
 			for (i = 0; i < 16; i++)
-				dat_w12864(addr[i + 16]);
+				dat_w12864(0x00);
 			break;
 		case 1:
 			break;
 		case 2:
 			for (i = 0; i < 63 - x; i++)
-				dat_w12864(addr[i + 16]);
+				dat_w12864(0x00);
 			break;
 		default:
 			break;
 		}
 	}
-	// 否则，一张图片要拆分成3段
 	else
 	{
-		// 先取上面第1段
-		uint8 seg1[16] = {0x00};
-		uint8 seg2[16] = {0x00};
-		uint8 seg3[16] = {0x00};
-
-		// 构造这3段新数据
-		for (i = 0; i < 16; i++)
-		{
-			seg1[i] = seg1[i] | (addr[i] << (8 - offset_y));
-			seg2[i] = (addr[i] >> offset_y) | (addr[i + 16] << (8 - offset_y));
-			seg3[i] = addr[i + 16] >> offset_y;
-		}
-
-		// 先画第一段
 		cmd_w12864(0x40 | x);
 		cmd_w12864(0xb8 | (screen_y));
 		for (i = 0; i < 16; i++)
-			dat_w12864(seg1[i]);
+			dat_w12864(0x00);
 
-		// 再画第二段
 		cmd_w12864(0x40 | x);
 		cmd_w12864(0xb8 | (screen_y + 1));
 		for (i = 0; i < 16; i++)
-			dat_w12864(seg2[i]);
+			dat_w12864(0x00);
 
-		// 再画第三段
 		cmd_w12864(0x40 | x);
 		cmd_w12864(0xb8 | (screen_y + 2));
 		for (i = 0; i < 16; i++)
-			dat_w12864(seg3[i]);
+			dat_w12864(0x00);
 	}
-}
-
-void clearObject(uint8 x, uint8 y)
-{
-	uint8 i;
-
-	if (x > 63)
-	{
-		choose12864(1);
-		x = x - 64;
-	}
-	else
-		choose12864(0);
-
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | (y++));
-
-	for (i = 0; i < 16; i++)
-		dat_w12864(0x00);
-
-	cmd_w12864(0x40 | x);
-	cmd_w12864(0xb8 | y);
-
-	for (i = 0; i < 16; i++)
-		dat_w12864(0x00);
 }

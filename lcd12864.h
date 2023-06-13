@@ -42,13 +42,12 @@ void play8(uint8 x, uint8 y, uint8 *addr);
 void play16(uint8 x, uint8 y, uint8 *addr);
 
 /**
- * @brief 绘图 8x16
+ * @brief 绘小板块
  *
  * @param x
  * @param y
- * @param addr
  */
-void drawPicture8(uint8 x, uint8 y, uint8 *addr);
+void drawBlock(uint8 x, uint8 y);
 
 /**
  * @brief 绘图 16x16
@@ -58,6 +57,6 @@ void drawPicture8(uint8 x, uint8 y, uint8 *addr);
  * @param addr 图像数组
  * @param dir 方向
  */
-void drawPicture16(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical);
+void drawKonglong(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical);
 
 #endif

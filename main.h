@@ -15,6 +15,10 @@
 #define DIR_DOWN 1
 #define DIR_STILL -1
 
+#define BLCOK_MAX_Y 55
+#define KONGLONG_MAX_X 111
+#define KONGLONG_MAX_Y 48
+
 typedef unsigned char uint8;
 typedef unsigned int uint16;
 typedef unsigned long uint32;
@@ -32,8 +36,8 @@ sbit SDA = P1 ^ 6;
 sbit RST = P1 ^ 7; // DS1302
 
 sbit KeyIn1 = P3 ^ 4;
-sbit KeyIn3 = P3 ^ 5;
-sbit KeyIn2 = P3 ^ 6;
+sbit KeyIn2 = P3 ^ 5;
+sbit KeyIn3 = P3 ^ 6;
 
 sbit BEEP = P3 ^ 3; //
 

@@ -12,16 +12,30 @@ typedef struct KongLong
 	uint8 *image;			 // 图像数组
 	int8 horizon_direction;	 // 左右方向，-1 保存水平, 0左 1 右
 	int8 vertical_direction; // 上下方向, -1 保持垂直，0 上，1下, 2 站在小板块上
+} KongLong;					 // 把 struct Konglong 定义成了 Konglong
 
-} KongLong; // 把 struct Konglong 定义成了 Konglong
+/**
+ * @brief 定义小板块
+ *
+ */
+typedef struct Block
+{
+	uint8 x, y;
+} Block;
 
-// 定义一个实例
-KongLong konglongBo = {0, 6, rec_frame, DIR_STILL, DIR_DOWN};
+/// @brief 小恐龙实例
+KongLong konglongBo = {0, 8, img_konglong, DIR_RIGHT, DIR_STILL};
+
+/// @brief 小板块
+Block blocks[] = {{88, BLCOK_MAX_Y}};
 
 /// @brief 一些变量
 uint16 counter1 = 0;
-uint16 timer0_counter1 = 0;
+uint8 timer0_counter1 = 0;
+uint8 timer0_counter2 = 0;
 uint8 konglong_counter1 = 0;
+uint8 blocksNumber = 1;
+uint8 blockMovingInterval = 10;
 
 /**
  * @brief 初始化定时器
@@ -47,22 +61,23 @@ void onTimer1() interrupt 1
 {
 	// counter 用于计数
 	++timer0_counter1;
+	++timer0_counter2;
 
 	TH0 = (65535 - 9216) / 256; // 10ms溢出中断
 	TL0 = (65535 - 9216) % 256;
 
 	// 每50ms
-	if (timer0_counter1 >= 10)
+	if (timer0_counter1 >= 8)
 	{
 		// 更新小恐龙水平位移
 		switch (konglongBo.horizon_direction)
 		{
 		case DIR_LEFT: // 向左
-			if (konglongBo.x != 0)
+			if (konglongBo.x > 0)
 				--konglongBo.x;
 			break;
 		case DIR_RIGHT: // 向右
-			if (konglongBo.x != 111)
+			if (konglongBo.x < 111)
 				++konglongBo.x;
 			break;
 		default:
@@ -90,6 +105,17 @@ void onTimer1() interrupt 1
 		timer0_counter1 = 0;
 	}
 
+	// 更新小板块位置
+	if (timer0_counter2 >= blockMovingInterval)
+	{
+		uint8 i;
+		for (i = 0; i < blocksNumber; i++)
+		{
+			blocks[i].y--;
+		}
+		timer0_counter2 = 0;
+	}
+
 	// TODO: 判断按键是否按下
 
 	// TODO: 更新小恐龙的横坐标
@@ -112,6 +138,8 @@ void onTimer2()
 
 void main(void)
 {
+	uint8 i;
+
 	// 初始化定时器
 	initializeTimer();
 
@@ -119,12 +147,34 @@ void main(void)
 	LCD_init();
 	delay(5);
 
+	// drawBlock(blocks[0].x, blocks[0].y);
+	// drawKonglong(konglongBo.x, konglongBo.y,
+	// 			 konglongBo.image, konglongBo.horizon_direction, konglongBo.vertical_direction);
+
 	while (1)
 	{
 		// TODO: 计算绘图地址
 		// TODO: 绘图
+		drawKonglong(konglongBo.x, konglongBo.y,
+					 konglongBo.image, konglongBo.horizon_direction, konglongBo.vertical_direction);
+		// for (i = 0; i < blocksNumber; i++)
+		// {
+		// 	drawBlock(blocks[i].x, blocks[i].y);
+		// }
 
-		drawPicture16(konglongBo.x, konglongBo.y, konglongBo.image, konglongBo.horizon_direction, konglongBo.vertical_direction);
+		// scan key
+		if (!KeyIn1) // 向左
+		{
+			if (konglongBo.horizon_direction == DIR_RIGHT)
+				clearObject(konglongBo.x, konglongBo.y);
+			konglongBo.horizon_direction = DIR_LEFT;
+		}
+		else if (!KeyIn2) // 向右
+		{
+			if (konglongBo.horizon_direction == DIR_LEFT)
+				clearObject(konglongBo.x, konglongBo.y);
+			konglongBo.horizon_direction = DIR_RIGHT;
+		}
 	}
 }
 
