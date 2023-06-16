@@ -1,659 +1,988 @@
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 1   
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE LCD12864
 OBJECT MODULE PLACED IN .\Objects\lcd12864.obj
-COMPILER INVOKED BY: D:\2023stuffs\Keil\C51\BIN\C51.EXE lcd12864.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\L
-                    -istings\lcd12864.lst) TABS(2) OBJECT(.\Objects\lcd12864.obj)
+COMPILER INVOKED BY: D:\2023stuffs\Keil\C51\BIN\C51.EXE lcd12864.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRI
+                    -NT(.\Listings\lcd12864.lst) TABS(2) OBJECT(.\Objects\lcd12864.obj)
 
 line level    source
 
-   1          /*
-   2           * LCD128*64
-   3           */
-   4          
-   5          #include "lcd12864.h"
-   6          
-   7          /// @brief 辅助显示图片的内存
-   8          uint8 seg1[16] = {0x00};
-   9          uint8 seg2[16] = {0x00};
-  10          uint8 seg3[16] = {0x00};
-  11          
-  12          void chekbusy12864(void)
-  13          {
-  14   1        uint8 dat;
-  15   1      
-  16   1        RS = 0;
-  17   1        RW = 1;
-  18   1        do
-  19   1        {
-  20   2          P2 = 0;
-  21   2          E = 1;
-  22   2          _nop_();
-  23   2          dat = P2 & 0x80;
-  24   2          E = 0;
-  25   2        } while (dat != 0);
-  26   1      }
-  27          
-  28          void choose12864(uint8 i)
-  29          {
-  30   1        switch (i)
-  31   1        {
-  32   2        case 0:
-  33   2          CS1 = 0;
-  34   2          CS2 = 1;
-  35   2          break;
-  36   2        case 1:
-  37   2          CS1 = 1;
-  38   2          CS2 = 0;
-  39   2          break;
-  40   2      
-  41   2        default:
-  42   2          break;
-  43   2        }
-  44   1      }
-  45          
-  46          void cmd_w12864(uint8 cmd)
-  47          {
-  48   1        chekbusy12864();
-  49   1      
-  50   1        RS = 0;
-  51   1        RW = 0;
-  52   1        _nop_();
-  53   1        E = 1;
-  54   1        _nop_();
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 2   
+   1          #include "lcd12864.h"
+   2          
+   3          /**
+   4           * @brief 辅助显示板块
+   5           *
+   6           */
+   7          void auxDrawBlock(uint8 x, uint8 screen_y, uint8 offset_y);
+   8          
+   9          /**
+  10           * @brief 辅助显示恐龙
+  11           *
+  12           * @param konglong
+  13           */
+  14          // void auxDrawKonglong(KongLong *konglong, uint8 x, uint8 screen_y, uint8 offset_y);
+  15          
+  16          /**
+  17           * @brief 辅助显示跨越左右屏幕的恐龙
+  18           *
+  19           */
+  20          void auxDrawKonglongX(KongLong *KongLong, uint8 screen_y, uint8 offset_y);
+  21          
+  22          /**
+  23           * @brief 清除小恐龙下降的残影
+  24           *
+  25           * @param x
+  26           * @param screen_y
+  27           */
+  28          void clearGhost(uint8 x, uint8 screen_y);
+  29          
+  30          /**
+  31           * @brief 小板块的二进制
+  32           *
+  33           */
+  34          #define blockDot 0x09
+  35          
+  36          /// @brief 辅助显示图片
+  37          data uint8 segment[16];
+  38          
+  39          /// @brief
+  40          data int8 screen_y;
+  41          data int8 offset_y;
+  42          
+  43          void chekbusy12864(void)
+  44          {
+  45   1        data uint8 dat;
+  46   1      
+  47   1        RS = 0;
+  48   1        RW = 1;
+  49   1        do
+  50   1        {
+  51   2          P2 = 0;
+  52   2          E = 1;
+  53   2          _nop_();
+  54   2          dat = P2 & 0x80;
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 2   
 
-  55   1        P2 = cmd;
-  56   1        _nop_();
-  57   1        E = 0;
-  58   1      }
-  59          
-  60          void dat_w12864(uint8 dat)
-  61          {
-  62   1        chekbusy12864();
-  63   1      
-  64   1        RS = 1;
-  65   1        RW = 0;
-  66   1        _nop_();
-  67   1        E = 1;
-  68   1        _nop_();
-  69   1        P2 = dat;
-  70   1        _nop_();
-  71   1        E = 0;
-  72   1      }
-  73          
-  74          void clear12864(void)
-  75          {
-  76   1        uint8 page, row;
-  77   1      
-  78   1        // 选择左屏
-  79   1        choose12864(0);
-  80   1        // 遍历 8 页
-  81   1        for (page = 0; page < 8; page++)
-  82   1        {
-  83   2          cmd_w12864(0xb8 + page);
-  84   2          cmd_w12864(0x40);
-  85   2          for (row = 0; row < 64; row++)
-  86   2          {
-  87   3      
-  88   3            dat_w12864(0x00);
-  89   3          }
-  90   2        }
-  91   1      
-  92   1        choose12864(1);
-  93   1        for (page = 0; page < 8; page++)
-  94   1        {
-  95   2          cmd_w12864(0xb8 + page);
-  96   2          cmd_w12864(0x40);
-  97   2          for (row = 0; row < 64; row++)
-  98   2          {
-  99   3            dat_w12864(0x00);
- 100   3          }
- 101   2        }
- 102   1      }
- 103          
- 104          void LCD_init(void)
- 105          {
- 106   1        chekbusy12864();
- 107   1        cmd_w12864(0xc0);
- 108   1        cmd_w12864(0x3f);
- 109   1        clear12864();
- 110   1      }
- 111          
- 112          void play8(uint8 x, uint8 y, uint8 *addr)
- 113          {
- 114   1        uint8 i;
- 115   1      
- 116   1        // x>63，说明 x 在右边，选择右屏
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 3   
+  55   2          E = 0;
+  56   2        } while (dat != 0);
+  57   1      }
+  58          
+  59          void choose12864(uint8 i)
+  60          {
+  61   1        switch (i)
+  62   1        {
+  63   2        case 0:
+  64   2          CS1 = 0;
+  65   2          CS2 = 1;
+  66   2          break;
+  67   2        case 1:
+  68   2          CS1 = 1;
+  69   2          CS2 = 0;
+  70   2          break;
+  71   2      
+  72   2        default:
+  73   2          break;
+  74   2        }
+  75   1      }
+  76          
+  77          void cmd_w12864(uint8 cmd)
+  78          {
+  79   1        chekbusy12864();
+  80   1      
+  81   1        RS = 0;
+  82   1        RW = 0;
+  83   1        _nop_();
+  84   1        E = 1;
+  85   1        _nop_();
+  86   1        P2 = cmd;
+  87   1        _nop_();
+  88   1        E = 0;
+  89   1      }
+  90          
+  91          void dat_w12864(uint8 dat)
+  92          {
+  93   1        chekbusy12864();
+  94   1      
+  95   1        RS = 1;
+  96   1        RW = 0;
+  97   1        _nop_();
+  98   1        E = 1;
+  99   1        _nop_();
+ 100   1        P2 = dat;
+ 101   1        _nop_();
+ 102   1        E = 0;
+ 103   1      }
+ 104          
+ 105          /**
+ 106           * @brief 读取屏幕数据
+ 107           *
+ 108           * @return uint8
+ 109           */
+ 110          uint8 dat_r12864(void)
+ 111          {
+ 112   1        data uint8 lcdData;
+ 113   1        chekbusy12864();
+ 114   1        P2 = 0xff;
+ 115   1        E = 0;
+ 116   1        RS = 1;
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 3   
 
- 117   1        if (x > 63)
- 118   1        {
- 119   2          choose12864(1);
- 120   2          x = x - 64;
- 121   2        }
- 122   1        else
- 123   1          choose12864(0);
- 124   1      
- 125   1        // 写入 x,y 位置
- 126   1        cmd_w12864(0x40 | x);
- 127   1        cmd_w12864(0xb8 | (y++));
- 128   1      
- 129   1        // 确保 y 第八位为 0
- 130   1        if ((y & 0x80) == 0)
- 131   1          // 写入 8 个 8 位的 16 进制数据
- 132   1          for (i = 0; i < 8; i++)
- 133   1            dat_w12864(*addr++);
- 134   1        else
- 135   1          for (i = 0; i < 8; i++)
- 136   1            dat_w12864(0xFF - *addr++);
- 137   1      
- 138   1        // 写入 x, y + 1
- 139   1        cmd_w12864(0x40 | x);
- 140   1        cmd_w12864(0xb8 | y);
- 141   1      
- 142   1        if ((y & 0x80) == 0)
- 143   1          for (i = 0; i < 8; i++)
- 144   1            dat_w12864(*addr++);
- 145   1        else
- 146   1          for (i = 0; i < 8; i++)
- 147   1            dat_w12864(0xFF - *addr++);
- 148   1      }
- 149          
- 150          void play16(uint8 x, uint8 y, uint8 *addr)
- 151          {
- 152   1        uint8 i;
- 153   1      
- 154   1        if (x > 63)
- 155   1        {
- 156   2          choose12864(1);
- 157   2          x = x - 64;
- 158   2        }
- 159   1        else
- 160   1          choose12864(0);
- 161   1      
- 162   1        cmd_w12864(0x40 | x);
- 163   1        cmd_w12864(0xb8 | (y++));
- 164   1      
- 165   1        if ((y & 0x80) == 0)
- 166   1          for (i = 0; i < 16; i++)
- 167   1            dat_w12864(*addr++);
- 168   1        else
- 169   1          for (i = 0; i < 16; i++)
- 170   1            dat_w12864(0xFF - *addr++);
- 171   1      
- 172   1        cmd_w12864(0x40 | x);
- 173   1        cmd_w12864(0xb8 | y);
+ 117   1        RW = 1;
+ 118   1        E = 1;
+ 119   1        _nop_();
+ 120   1        _nop_();
+ 121   1        _nop_();
+ 122   1        lcdData = P2;
+ 123   1        _nop_();
+ 124   1        _nop_();
+ 125   1        _nop_();
+ 126   1        E = 0;
+ 127   1        return lcdData;
+ 128   1      }
+ 129          
+ 130          void clear12864(void)
+ 131          {
+ 132   1        data uint8 page, row;
+ 133   1      
+ 134   1        // 选择左屏
+ 135   1        choose12864(0);
+ 136   1        // 遍历 8 页
+ 137   1        for (page = 0; page < 8; page++)
+ 138   1        {
+ 139   2          cmd_w12864(0xb8 + page);
+ 140   2          cmd_w12864(0x40);
+ 141   2          for (row = 0; row < 64; row++)
+ 142   2          {
+ 143   3      
+ 144   3            dat_w12864(0x00);
+ 145   3          }
+ 146   2        }
+ 147   1      
+ 148   1        choose12864(1);
+ 149   1        for (page = 0; page < 8; page++)
+ 150   1        {
+ 151   2          cmd_w12864(0xb8 + page);
+ 152   2          cmd_w12864(0x40);
+ 153   2          for (row = 0; row < 64; row++)
+ 154   2          {
+ 155   3            dat_w12864(0x00);
+ 156   3          }
+ 157   2        }
+ 158   1      }
+ 159          
+ 160          void LCD_init(void)
+ 161          {
+ 162   1        chekbusy12864();
+ 163   1        cmd_w12864(0xc0);
+ 164   1        cmd_w12864(0x3f);
+ 165   1        clear12864();
+ 166   1      }
+ 167          
+ 168          void drawBlock(uint8 x, uint8 y, bit standing)
+ 169          {
+ 170   1        data uint8 i;
+ 171   1        //  data uint8 blockDot = 0x0f;
+ 172   1        screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
+ 173   1        offset_y = y % 8; // 算出 y 对 screen_y 的偏移
  174   1      
- 175   1        if ((y & 0x80) == 0)
- 176   1          for (i = 0; i < 16; i++)
- 177   1            dat_w12864(*addr++);
- 178   1        else
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 4   
+ 175   1        // 选择屏幕
+ 176   1        if (x > 63)
+ 177   1        {
+ 178   2          choose12864(1);
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 4   
 
- 179   1          for (i = 0; i < 16; i++)
- 180   1            dat_w12864(0xFF - *addr++);
- 181   1      }
- 182          
- 183          void drawBlock(uint8 x, uint8 y)
- 184          {
- 185   1        int8 screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
- 186   1        int8 offset_y = y % 8; // 算出 y 对 screen_y 的偏移
- 187   1      
- 188   1        uint8 blockDot = 0xff;
- 189   1        uint8 i;
- 190   1      
- 191   1        if (x > 63)
- 192   1        {
- 193   2          choose12864(1);
- 194   2          x = x - 64;
- 195   2        }
- 196   1        else if (x == 63)
+ 179   2          x = x - 64;
+ 180   2        }
+ 181   1        else
+ 182   1          choose12864(0);
+ 183   1      
+ 184   1        // offset 为 0 就正常显示图片
+ 185   1        if (!offset_y)
+ 186   1        {
+ 187   2          cmd_w12864(0x40 | x);
+ 188   2          cmd_w12864(0xb8 | screen_y);
+ 189   2      
+ 190   2          dat_w12864(0x0f);
+ 191   2          for (i = 1; i < 15; i++)
+ 192   2            dat_w12864(blockDot);
+ 193   2          dat_w12864(0x0f);
+ 194   2        }
+ 195   1        // 否则，一张图片要拆分成2段
+ 196   1        else
  197   1        {
- 198   2          choose12864(1);
- 199   2          x = 0;
- 200   2        }
- 201   1        else
- 202   1          choose12864(0);
- 203   1      
- 204   1        // offset 为 0 就正常显示图片
- 205   1        if (!offset_y)
- 206   1        {
- 207   2          cmd_w12864(0x40 | x);
- 208   2          cmd_w12864(0xb8 | screen_y);
- 209   2          for (i = 0; i < 16; i++)
- 210   2            dat_w12864(blockDot);
- 211   2        }
- 212   1        // 否则，一张图片要拆分成2段
- 213   1        else
- 214   1        {
- 215   2          // 构造这2段新数据
- 216   2          for (i = 0; i < 16; i++)
- 217   2          {
- 218   3            seg1[i] = seg1[i] | (blockDot << offset_y);
- 219   3            seg2[i] = (blockDot >> (8 - offset_y));
- 220   3          }
- 221   2      
- 222   2          // 先画第一段
- 223   2          cmd_w12864(0x40 | x);
- 224   2          cmd_w12864(0xb8 | (screen_y));
- 225   2          for (i = 0; i < 16; i++)
- 226   2            dat_w12864(seg1[i]);
- 227   2      
- 228   2          // 再画第二段
- 229   2          cmd_w12864(0x40 | x);
- 230   2          cmd_w12864(0xb8 | (screen_y + 1));
- 231   2          for (i = 0; i < 16; i++)
- 232   2            dat_w12864(seg2[i]);
+ 198   2          // 先画第一段
+ 199   2          cmd_w12864(0x40 | x);
+ 200   2          cmd_w12864(0xb8 | (screen_y));
+ 201   2      
+ 202   2          // 如果板块上面站在小恐龙，则使用复杂绘图法
+ 203   2          if (standing)
+ 204   2          {
+ 205   3            auxDrawBlock(x, screen_y, offset_y);
+ 206   3          }
+ 207   2          else
+ 208   2          {
+ 209   3            segment[0] = (0x0f << offset_y) | 0x00;
+ 210   3            dat_w12864(segment[0]);
+ 211   3            for (i = 1; i < 15; i++)
+ 212   3            {
+ 213   4              segment[0] = (blockDot << offset_y) | 0x00;
+ 214   4              dat_w12864(segment[0]);
+ 215   4            }
+ 216   3            segment[0] = (0x0f << offset_y) | 0x00;
+ 217   3            dat_w12864(segment[0]);
+ 218   3          }
+ 219   2      
+ 220   2          // 再画第二段
+ 221   2          cmd_w12864(0x40 | x);
+ 222   2          cmd_w12864(0xb8 | (screen_y + 1));
+ 223   2      
+ 224   2          segment[0] = (0x0f >> (8 - offset_y));
+ 225   2          dat_w12864(segment[0]);
+ 226   2          for (i = 1; i < 15; i++)
+ 227   2          {
+ 228   3            segment[0] = (blockDot >> (8 - offset_y));
+ 229   3            dat_w12864(segment[0]);
+ 230   3          }
+ 231   2          segment[0] = (0x0f >> (8 - offset_y));
+ 232   2          dat_w12864(segment[0]);
  233   2      
- 234   2          // seg 重新置零
- 235   2          for (i = 0; i < 16; i++)
- 236   2          {
- 237   3            seg1[i] = 0;
- 238   3            seg2[i] = 0;
- 239   3          }
- 240   2        }
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 5   
+ 234   2          for (i = 0; i < 16; i++)
+ 235   2            segment[0] = 0x00;
+ 236   2        }
+ 237   1      }
+ 238          
+ 239          /**
+ 240           * @brief
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 5   
 
- 241   1      
- 242   1        if ((y - 1) % 8 == 0)
- 243   1        {
- 244   2          cmd_w12864(0x40 | x);
- 245   2          cmd_w12864(0xb8 | (screen_y + 1));
- 246   2          for (i = 0; i < 16; i++)
- 247   2          {
- 248   3            dat_w12864(0x00);
- 249   3          }
- 250   2        }
- 251   1      }
- 252          
- 253          /**
- 254           * @brief
- 255           * 图像的 y 坐标并不是屏幕的实际 y 坐标，屏幕纵方向被分为了 8 段，每段有 8 �
+ 241           * 图像的 y 坐标并不是屏幕的实际 y 坐标，屏幕纵方向被分为了 8 段，每段有 8 �
              -��，共 64 个像素。
- 256           * 我们每次向屏幕写入一个 8位16进制数据，那这个数据就会在屏幕上形成 纵方�
+ 242           * 我们每次向屏幕写入一个 8位16进制数据，那这个数据就会在屏幕上形成 纵方�
              -�的8个小点。（刚好是 16x16 图像高度的一半）
- 257           * 一般我们要在 （screen_x,screen_y) 的地方写入 16x16 的图片，
- 258           * 都是先在 (screen_x,screen_y)写上半部分，写入 8 个8位16进制数据，构成图像的上�
+ 243           * 一般我们要在 （screen_x,screen_y) 的地方写入 16x16 的图片，
+ 244           * 都是先在 (screen_x,screen_y)写上半部分，写入 8 个8位16进制数据，构成图像的上�
              -�部分，
- 259           * 然后再在 (screen_x,screen_y + 1)写入下半部分。
- 260           * 假如图像的 y 坐标刚好是 8 的倍数，比如 16，那 16x16 的图像刚好可以被放在屏
+ 245           * 然后再在 (screen_x,screen_y + 1)写入下半部分。
+ 246           * 假如图像的 y 坐标刚好是 8 的倍数，比如 16，那 16x16 的图像刚好可以被放在屏
              -幕 y 坐标为 2 的位置。
- 261           * 如果图像的 y 坐标不是 8 的倍数，比如 18，那我们就需要把图像分成 3 段，并�
+ 247           * 如果图像的 y 坐标不是 8 的倍数，比如 18，那我们就需要把图像分成 3 段，并�
              -��过负责的运算把图像放到屏幕上。
- 262           *
- 263           * @param x 0~127
- 264           * @param y 0~63
- 265           * @param addr
- 266           * @param dir_horizon
- 267           * @param dir_vertical
- 268           */
- 269          void drawKonglong(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical)
- 270          {
- 271   1        int8 screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
- 272   1        int8 offset_y = y % 8; // 算出 y 对 screen_y 的偏移
- 273   1      
- 274   1        uint8 i;
- 275   1        uint8 crossingScreen = 0;
+ 248           *
+ 249           */
+ 250          void drawKonglong(KongLong *konglong)
+ 251          {
+ 252   1        data uint8 i;
+ 253   1        data int8 x = konglong->x;
+ 254   1        screen_y = konglong->y / 8; // 算出 y 对应屏幕的 y 坐标
+ 255   1        offset_y = konglong->y % 8; // 算出 y 对 screen_y 的偏移
+ 256   1      
+ 257   1        // 判断是否在跨越左右屏幕
+ 258   1        if (konglong->x > 47 && konglong->x < 64)
+ 259   1        {
+ 260   2          auxDrawKonglongX(konglong, screen_y, offset_y);
+ 261   2          return;
+ 262   2        }
+ 263   1      
+ 264   1        // 选择屏幕
+ 265   1        if (x > 63)
+ 266   1        {
+ 267   2          choose12864(1);
+ 268   2          x = x - 64;
+ 269   2        }
+ 270   1        else
+ 271   1          choose12864(0);
+ 272   1      
+ 273   1        // 清除残影
+ 274   1        if (!((konglong->y - 1) % 8))
+ 275   1          clearGhost(konglong->x, screen_y - 1);
  276   1      
- 277   1        // 判断小恐龙是否在横跨左右屏幕
- 278   1        if (x > 47 && x < 63)
+ 277   1        // offset 为 0 就正常显示图片
+ 278   1        if (!offset_y)
  279   1        {
- 280   2          switch (dir_horizon)
- 281   2          {
- 282   3          case DIR_LEFT:
- 283   3            crossingScreen = 1; // 表示小恐龙正在从右向左跨屏
- 284   3            break;
- 285   3          case DIR_RIGHT:
- 286   3            crossingScreen = 2; // 表示小恐龙正在从左向右跨屏
- 287   3            break;
- 288   3          default:
- 289   3            break;
- 290   3          }
- 291   2        }
- 292   1      
- 293   1        // 选择屏幕
- 294   1        // 左屏幕往右的边界
- 295   1        if (x == 63 && dir_horizon == DIR_RIGHT)
- 296   1        {
- 297   2          choose12864(1);
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 6   
+ 280   2          // 向右移动和向左移动不同
+ 281   2          if (konglong->towards == DIR_RIGHT)
+ 282   2          {
+ 283   3            // 上半部分
+ 284   3            cmd_w12864(0x40 | x);
+ 285   3            cmd_w12864(0xb8 | screen_y);
+ 286   3            for (i = 0; i < 16; i++)
+ 287   3              dat_w12864(konglong->image[i]);
+ 288   3      
+ 289   3            // 下半部分
+ 290   3            cmd_w12864(0x40 | x);
+ 291   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 292   3            for (i = 0; i < 16; i++)
+ 293   3              dat_w12864(konglong->image[i + 16]);
+ 294   3          }
+ 295   2          else
+ 296   2          {
+ 297   3            cmd_w12864(0x40 | x);
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 6   
 
- 298   2          x = 0;
- 299   2        }
- 300   1        // 右屏幕往左的边界
- 301   1        else if (x == 47 && dir_horizon == DIR_LEFT)
- 302   1        {
- 303   2          choose12864(0);
- 304   2          x = 47;
- 305   2        }
- 306   1        // x 超过63，说明在右屏幕
- 307   1        else if (x > 63)
- 308   1        {
- 309   2          choose12864(1);
- 310   2          x = x - 64;
- 311   2        }
- 312   1        // 如果小于 63 又大于 47，且向左，则说明在由右往左横跨屏幕
- 313   1        else if (crossingScreen == 1)
- 314   1        {
- 315   2          choose12864(1);
- 316   2          // 在这个特殊情况下，x是负数
- 317   2          x = x - 63;
- 318   2        }
- 319   1        else
- 320   1          choose12864(0);
- 321   1      
- 322   1        // offset 为 0 就正常显示图片
- 323   1        if (!offset_y)
- 324   1        {
- 325   2          // 如果小恐龙正在横跨左右屏幕，那需要特殊处理
- 326   2          switch (crossingScreen)
- 327   2          {
- 328   3          case 0: // 不跨屏
- 329   3            // 向右移动和向左移动不同
- 330   3            cmd_w12864(0x40 | x);
- 331   3            cmd_w12864(0xb8 | screen_y);
- 332   3            if (dir_horizon == DIR_RIGHT)
- 333   3              for (i = 0; i < 16; i++)
- 334   3                dat_w12864(addr[i]);
- 335   3            else
- 336   3              for (i = 0; i < 16; i++)
- 337   3                dat_w12864(addr[15 - i]);
- 338   3            break;
- 339   3          case 1: // 右跨左
- 340   3            // 向右移动和向左移动不同
- 341   3            cmd_w12864(0x40);
- 342   3            cmd_w12864(0xb8 | screen_y);
- 343   3            for (i = 16 + x; i < 16; i++)
- 344   3              dat_w12864(addr[15 - i]);
- 345   3            break;
- 346   3            break;
- 347   3          case 2: // 左跨右
- 348   3            // 向右移动和向左移动不同
+ 298   3            cmd_w12864(0xb8 | screen_y);
+ 299   3            for (i = 0; i < 16; i++)
+ 300   3              dat_w12864(konglong->image[15 - i]);
+ 301   3      
+ 302   3            // 下半部分
+ 303   3            // 处理跨屏
+ 304   3            cmd_w12864(0x40 | x);
+ 305   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 306   3            // 向右移动和向左移动不同
+ 307   3            for (i = 0; i < 16; i++)
+ 308   3              dat_w12864(konglong->image[31 - i]);
+ 309   3          }
+ 310   2        }
+ 311   1        // 否则，一张图片要拆分成3段
+ 312   1        else
+ 313   1        {
+ 314   2          if (konglong->towards == DIR_RIGHT)
+ 315   2          {
+ 316   3            // 先画第一段
+ 317   3            cmd_w12864(0x40 | x);
+ 318   3            cmd_w12864(0xb8 | screen_y);
+ 319   3      
+ 320   3            for (i = 0; i < 16; i++)
+ 321   3            {
+ 322   4              segment[0] = 0x00 | (konglong->image[i] << offset_y);
+ 323   4              dat_w12864(segment[0]);
+ 324   4            }
+ 325   3      
+ 326   3            // 第二段
+ 327   3            cmd_w12864(0x40 | x);
+ 328   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 329   3      
+ 330   3            for (i = 0; i < 16; i++)
+ 331   3            {
+ 332   4              segment[0] = (konglong->image[i] >> (8 - offset_y)) | (konglong->image[i + 16] << offset_y);
+ 333   4              dat_w12864(segment[0]);
+ 334   4            }
+ 335   3      
+ 336   3            // 第三段
+ 337   3            cmd_w12864(0x40 | x);
+ 338   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 339   3      
+ 340   3            for (i = 0; i < 16; i++)
+ 341   3            {
+ 342   4              segment[0] = konglong->image[i + 16] >> (8 - offset_y);
+ 343   4              dat_w12864(segment[0]);
+ 344   4            }
+ 345   3          }
+ 346   2          else
+ 347   2          {
+ 348   3            // 先画第一段
  349   3            cmd_w12864(0x40 | x);
  350   3            cmd_w12864(0xb8 | screen_y);
- 351   3            for (i = 0; i < 63 - x; i++)
- 352   3              dat_w12864(addr[i]);
- 353   3            break;
- 354   3          default:
- 355   3            break;
- 356   3          }
- 357   2      
- 358   2          // 下半部分
- 359   2          // 处理跨屏
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 7   
+ 351   3            for (i = 0; i < 16; i++)
+ 352   3            {
+ 353   4              segment[0] = 0x00 | (konglong->image[15 - i] << offset_y);
+ 354   4              dat_w12864(segment[0]);
+ 355   4            }
+ 356   3      
+ 357   3            // 第二段
+ 358   3            cmd_w12864(0x40 | x);
+ 359   3            cmd_w12864(0xb8 | (screen_y + 1));
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 7   
 
- 360   2          switch (crossingScreen)
- 361   2          {
- 362   3          case 0: // 不跨屏
- 363   3            cmd_w12864(0x40 | x);
- 364   3            cmd_w12864(0xb8 | (screen_y + 1));
- 365   3            // 向右移动和向左移动不同
- 366   3            if (dir_horizon == DIR_RIGHT)
- 367   3              for (i = 0; i < 16; i++)
- 368   3                dat_w12864(addr[i + 16]);
- 369   3            else
- 370   3              for (i = 0; i < 16; i++)
- 371   3                dat_w12864(addr[31 - i]);
- 372   3            break;
- 373   3          case 1: // 右跨左
- 374   3            cmd_w12864(0x40 | 0);
- 375   3            cmd_w12864(0xb8 | (screen_y + 1));
- 376   3            for (i = 16 + x; i < 16; i++)
- 377   3              dat_w12864(addr[31 - i]);
- 378   3            break;
- 379   3          case 2: // 左跨右
- 380   3            cmd_w12864(0x40 | x);
- 381   3            cmd_w12864(0xb8 | (screen_y + 1));
- 382   3            for (i = 0; i < 63 - x; i++)
- 383   3              dat_w12864(addr[i + 16]);
- 384   3            break;
- 385   3          default:
- 386   3            break;
- 387   3          }
- 388   2        }
- 389   1        // 否则，一张图片要拆分成3段
- 390   1        else
- 391   1        {
- 392   2          // 构造这3段新数据
- 393   2          for (i = 0; i < 16; i++)
- 394   2          {
- 395   3            seg1[i] = seg1[i] | (addr[i] << offset_y);
- 396   3            seg2[i] = (addr[i] >> (8 - offset_y)) | (addr[i + 16] << offset_y);
- 397   3            seg3[i] = addr[i + 16] >> (8 - offset_y);
- 398   3          }
- 399   2      
- 400   2          switch (crossingScreen)
- 401   2          {
- 402   3          case 0: // 没有横跨屏幕
- 403   3            // 向右移动和向左移动不同
- 404   3            if (dir_horizon == DIR_RIGHT)
- 405   3            {
- 406   4              // 先画第一段
- 407   4              cmd_w12864(0x40 | x);
- 408   4              cmd_w12864(0xb8 | screen_y);
- 409   4              for (i = 0; i < 16; i++)
- 410   4                dat_w12864(seg1[i]);
- 411   4      
- 412   4              // 再画第二段
- 413   4              cmd_w12864(0x40 | x);
- 414   4              cmd_w12864(0xb8 | (screen_y + 1));
- 415   4              for (i = 0; i < 16; i++)
- 416   4                dat_w12864(seg2[i]);
- 417   4      
- 418   4              // 再画第三段
- 419   4              cmd_w12864(0x40 | x);
- 420   4              cmd_w12864(0xb8 | (screen_y + 2));
- 421   4              for (i = 0; i < 16; i++)
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 8   
+ 360   3            for (i = 0; i < 16; i++)
+ 361   3            {
+ 362   4              segment[0] = (konglong->image[15 - i] >> (8 - offset_y)) |
+ 363   4                     (konglong->image[31 - i] << offset_y);
+ 364   4              dat_w12864(segment[0]);
+ 365   4            }
+ 366   3      
+ 367   3            // 第三段
+ 368   3            cmd_w12864(0x40 | x);
+ 369   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 370   3            for (i = 0; i < 16; i++)
+ 371   3            {
+ 372   4              segment[0] = konglong->image[31 - i] >> (8 - offset_y);
+ 373   4              dat_w12864(segment[0]);
+ 374   4            }
+ 375   3          }
+ 376   2      
+ 377   2          // 清除 segment
+ 378   2          segment[0] = 0x00;
+ 379   2          if (konglong->standingBlock != -1)
+ 380   2          {
+ 381   3            for (i = 1; i < 16; i++)
+ 382   3            {
+ 383   4              segment[i] = 0x00;
+ 384   4            }
+ 385   3          }
+ 386   2        }
+ 387   1      }
+ 388          
+ 389          void clearObject(uint8 x, uint8 y)
+ 390          {
+ 391   1        data uint8 i;
+ 392   1        screen_y = y / 8;   // 算出 y 对应屏幕的 y 坐标
+ 393   1        offset_y = 8 - (y % 8); // 算出 y 对 screen_y 的偏移
+ 394   1      
+ 395   1        if (x > 63)
+ 396   1        {
+ 397   2          choose12864(1);
+ 398   2          x = x - 64;
+ 399   2        }
+ 400   1        else
+ 401   1          choose12864(0);
+ 402   1      
+ 403   1        // offset 为 0 就正常清除图片
+ 404   1        if (!offset_y)
+ 405   1        {
+ 406   2          cmd_w12864(0x40 | x);
+ 407   2          cmd_w12864(0xb8 | screen_y);
+ 408   2          for (i = 0; i < 16; i++)
+ 409   2            dat_w12864(0x00);
+ 410   2      
+ 411   2          // 下半部分
+ 412   2          cmd_w12864(0x40 | x);
+ 413   2          cmd_w12864(0xb8 | (screen_y + 1));
+ 414   2          for (i = 0; i < 16; i++)
+ 415   2            dat_w12864(0x00);
+ 416   2        }
+ 417   1        else
+ 418   1        {
+ 419   2          cmd_w12864(0x40 | x);
+ 420   2          cmd_w12864(0xb8 | (screen_y));
+ 421   2          for (i = 0; i < 16; i++)
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 8   
 
- 422   4                dat_w12864(seg3[i]);
- 423   4              break;
- 424   4            }
- 425   3            else
- 426   3            {
- 427   4              // 先画第一段
- 428   4              cmd_w12864(0x40 | x);
- 429   4              cmd_w12864(0xb8 | screen_y);
- 430   4              for (i = 0; i < 16; i++)
- 431   4                dat_w12864(seg1[15 - i]);
- 432   4      
- 433   4              // 再画第二段
- 434   4              cmd_w12864(0x40 | x);
- 435   4              cmd_w12864(0xb8 | (screen_y + 1));
- 436   4              for (i = 0; i < 16; i++)
- 437   4                dat_w12864(seg2[15 - i]);
- 438   4      
- 439   4              // 再画第三段
- 440   4              cmd_w12864(0x40 | x);
- 441   4              cmd_w12864(0xb8 | (screen_y + 2));
- 442   4              for (i = 0; i < 16; i++)
- 443   4                dat_w12864(seg3[15 - i]);
- 444   4              break;
- 445   4            }
- 446   3      
- 447   3          case 1: // 右跨左
- 448   3            cmd_w12864(0x40);
- 449   3            cmd_w12864(0xb8 | screen_y);
- 450   3            for (i = 63 - x; i < 16; i++)
- 451   3              dat_w12864(seg1[16 - i]);
- 452   3      
- 453   3            // 再画第二段
- 454   3            cmd_w12864(0x40);
- 455   3            cmd_w12864(0xb8 | (screen_y + 1));
- 456   3            for (i = 63 - x; i < 16; i++)
- 457   3              dat_w12864(seg2[16 - i]);
- 458   3      
- 459   3            // 再画第三段
- 460   3            cmd_w12864(0x40);
- 461   3            cmd_w12864(0xb8 | (screen_y + 2));
- 462   3            for (i = 63 - x; i < 16; i++)
- 463   3              dat_w12864(seg3[16 - i]);
- 464   3      
- 465   3            break;
- 466   3          case 2: // 左跨右
- 467   3            // 先画第一段
- 468   3            cmd_w12864(0x40 | x);
- 469   3            cmd_w12864(0xb8 | screen_y);
- 470   3            for (i = 0; i < 63 - x; i++)
- 471   3              dat_w12864(seg1[i]);
- 472   3      
- 473   3            // 再画第二段
- 474   3            cmd_w12864(0x40 | x);
- 475   3            cmd_w12864(0xb8 | (screen_y + 1));
- 476   3            for (i = 0; i < 63 - x; i++)
- 477   3              dat_w12864(seg2[i]);
- 478   3      
- 479   3            // 再画第三段
- 480   3            cmd_w12864(0x40 | x);
- 481   3            cmd_w12864(0xb8 | (screen_y + 2));
- 482   3            for (i = 0; i < 63 - x; i++)
- 483   3              dat_w12864(seg3[i]);
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 9   
+ 422   2            dat_w12864(0x00);
+ 423   2      
+ 424   2          cmd_w12864(0x40 | x);
+ 425   2          cmd_w12864(0xb8 | (screen_y + 1));
+ 426   2          for (i = 0; i < 16; i++)
+ 427   2            dat_w12864(0x00);
+ 428   2      
+ 429   2          cmd_w12864(0x40 | x);
+ 430   2          cmd_w12864(0xb8 | (screen_y + 2));
+ 431   2          for (i = 0; i < 16; i++)
+ 432   2            dat_w12864(0x00);
+ 433   2        }
+ 434   1      }
+ 435          
+ 436          // void drawWall()
+ 437          // {
+ 438          //  uint8 i;
+ 439          //  choose12864(0);
+ 440          //  for (i = 0; i < 8; i++)
+ 441          //  {
+ 442          //    cmd_w12864(0x40 | 63);
+ 443          //    cmd_w12864(0xb8 | i);
+ 444          //    dat_w12864(0xff);
+ 445          //  }
+ 446          // }
+ 447          
+ 448          void drawRoof()
+ 449          {
+ 450   1        data uint8 i;
+ 451   1        choose12864(0);
+ 452   1        for (i = 0; i < 64; i++)
+ 453   1        {
+ 454   2          cmd_w12864(0x40 | i);
+ 455   2          cmd_w12864(0xb8);
+ 456   2          dat_w12864(0x01);
+ 457   2        }
+ 458   1        for (i = 0; i < 8; i++)
+ 459   1        {
+ 460   2          cmd_w12864(0x40);
+ 461   2          cmd_w12864(0xb8 | i);
+ 462   2          dat_w12864(0xff);
+ 463   2        }
+ 464   1        // 右
+ 465   1        choose12864(1);
+ 466   1        for (i = 0; i < 64; i++)
+ 467   1        {
+ 468   2          cmd_w12864(0x40 | i);
+ 469   2          cmd_w12864(0xb8);
+ 470   2          dat_w12864(0x01);
+ 471   2        }
+ 472   1        for (i = 0; i < 8; i++)
+ 473   1        {
+ 474   2          cmd_w12864(0x40 | 63);
+ 475   2          cmd_w12864(0xb8 | i);
+ 476   2          dat_w12864(0xff);
+ 477   2        }
+ 478   1      }
+ 479          
+ 480          /**
+ 481           * @brief 用复杂绘图法画第一段
+ 482           *
+ 483           * @param x
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 9   
 
- 484   3            break;
- 485   3      
- 486   3          default:
- 487   3            break;
- 488   3          }
- 489   2      
- 490   2          // seg 重新置零
- 491   2          for (i = 0; i < 16; i++)
- 492   2          {
- 493   3            seg1[i] = 0;
- 494   3            seg2[i] = 0;
- 495   3            seg3[i] = 0;
- 496   3          }
- 497   2        }
- 498   1      
- 499   1        // 清除残影
- 500   1        switch (dir_vertical)
- 501   1        {
- 502   2        case DIR_DOWN:
- 503   2          if ((y + 1) % 8 == 0)
- 504   2          {
- 505   3            cmd_w12864(0x40 | x);
- 506   3            cmd_w12864(0xb8 | (screen_y));
- 507   3            for (i = 0; i < 16; i++)
- 508   3            {
- 509   4              dat_w12864(0x00);
- 510   4            }
- 511   3          }
- 512   2          break;
- 513   2        case DIR_UP:
- 514   2          if ((y - 1) % 8 == 0)
- 515   2          {
- 516   3            cmd_w12864(0x40 | x);
- 517   3            cmd_w12864(0xb8 | (screen_y + 1));
- 518   3            for (i = 0; i < 16; i++)
- 519   3            {
- 520   4              dat_w12864(0x00);
- 521   4            }
- 522   3          }
- 523   2          break;
- 524   2      
- 525   2        default:
- 526   2          break;
- 527   2        }
- 528   1      }
- 529          
- 530          void clearObject(uint8 x, uint8 y)
- 531          {
- 532   1        int8 screen_y = y / 8;     // 算出 y 对应屏幕的 y 坐标
- 533   1        int8 offset_y = 8 - (y % 8); // 算出 y 对 screen_y 的偏移
- 534   1      
- 535   1        uint8 i;
- 536   1        uint8 crossingScreen = 0;
- 537   1      
- 538   1        if (x > 63)
- 539   1        {
- 540   2          choose12864(1);
- 541   2          x = x - 64;
- 542   2        }
- 543   1        else if (x == 63)
- 544   1        {
- 545   2          choose12864(1);
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 10  
+ 484           * @param screen_y
+ 485           * @param offset_y
+ 486           */
+ 487          void auxDrawBlock(uint8 x, uint8 screen_y, uint8 offset_y)
+ 488          {
+ 489   1        uint8 i;
+ 490   1      
+ 491   1        // 指令已经在调用该函数前写入了
+ 492   1        // 画第一段
+ 493   1        // 如果小恐龙站在小板子上面，或者小板子达到了顶层，那就用复杂绘制法
+ 494   1        dat_r12864();
+ 495   1        segment[0] = (0x0f << offset_y) | dat_r12864();
+ 496   1        for (i = 1; i < 15; i++)
+ 497   1        {
+ 498   2          dat_r12864();
+ 499   2          segment[i] = (blockDot << offset_y) |
+ 500   2                 dat_r12864() & (0xff >> (8 - offset_y));
+ 501   2        }
+ 502   1        dat_r12864();
+ 503   1        segment[15] = (0x0f << offset_y) | dat_r12864();
+ 504   1      
+ 505   1        cmd_w12864(0x40 | x);
+ 506   1        cmd_w12864(0xb8 | (screen_y));
+ 507   1        for (i = 0; i < 16; i++)
+ 508   1        {
+ 509   2          dat_w12864(segment[i]);
+ 510   2        }
+ 511   1      }
+ 512          
+ 513          /**
+ 514           * @brief 用复杂绘图法画第三段
+ 515           *
+ 516           * @param konglong
+ 517           * @param x
+ 518           * @param screen_y
+ 519           * @param offset_y
+ 520           */
+ 521          // void auxDrawKonglong(KongLong *konglong, uint8 x, uint8 screen_y, uint8 offset_y)
+ 522          // {
+ 523          //  uint8 i;
+ 524          
+ 525          //  // 指令已经在调用该函数前写入了
+ 526          //  for (i = 0; i < 16; i++)
+ 527          //  {
+ 528          //    dat_r12864();
+ 529          //    segment[i] = konglong->image[i + 16] >> (8 - offset_y) | dat_r12864();
+ 530          //  }
+ 531          
+ 532          //  cmd_w12864(0x40 | x);
+ 533          //  cmd_w12864(0xb8 | (screen_y + 2));
+ 534          
+ 535          //  if (konglong->towards == DIR_RIGHT)
+ 536          //  {
+ 537          //    for (i = 0; i < 16; i++)
+ 538          //    {
+ 539          //      dat_w12864(segment[i]);
+ 540          //    }
+ 541          //  }
+ 542          //  else
+ 543          //  {
+ 544          //    for (i = 0; i < 16; i++)
+ 545          //    {
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 10  
 
- 546   2          x = 0;
- 547   2        }
- 548   1        else
- 549   1          choose12864(0);
- 550   1      
- 551   1        // offset 为 0 就正常清除图片
- 552   1        if (!offset_y)
- 553   1        {
- 554   2      
- 555   2          cmd_w12864(0x40 | x);
- 556   2          cmd_w12864(0xb8 | screen_y);
- 557   2      
- 558   2          switch (crossingScreen)
- 559   2          {
- 560   3          case 0:
- 561   3            for (i = 0; i < 16; i++)
- 562   3              dat_w12864(0x00);
- 563   3            break;
- 564   3          case 1:
- 565   3            break;
- 566   3          case 2:
- 567   3            for (i = 0; i < 63 - x; i++)
- 568   3              dat_w12864(0x00);
- 569   3            break;
- 570   3          default:
- 571   3            break;
- 572   3          }
- 573   2      
- 574   2          // 下半部分
- 575   2          cmd_w12864(0x40 | x);
- 576   2          cmd_w12864(0xb8 | (screen_y + 1));
- 577   2      
- 578   2          switch (crossingScreen)
- 579   2          {
- 580   3          case 0:
- 581   3            for (i = 0; i < 16; i++)
- 582   3              dat_w12864(0x00);
- 583   3            break;
- 584   3          case 1:
- 585   3            break;
- 586   3          case 2:
- 587   3            for (i = 0; i < 63 - x; i++)
- 588   3              dat_w12864(0x00);
- 589   3            break;
- 590   3          default:
- 591   3            break;
- 592   3          }
- 593   2        }
- 594   1        else
- 595   1        {
- 596   2          cmd_w12864(0x40 | x);
- 597   2          cmd_w12864(0xb8 | (screen_y));
- 598   2          for (i = 0; i < 16; i++)
- 599   2            dat_w12864(0x00);
- 600   2      
- 601   2          cmd_w12864(0x40 | x);
- 602   2          cmd_w12864(0xb8 | (screen_y + 1));
- 603   2          for (i = 0; i < 16; i++)
- 604   2            dat_w12864(0x00);
- 605   2      
- 606   2          cmd_w12864(0x40 | x);
- 607   2          cmd_w12864(0xb8 | (screen_y + 2));
-C51 COMPILER V9.60.7.0   LCD12864                                                          06/13/2023 20:53:37 PAGE 11  
+ 546          //      dat_w12864(segment[15 - i]);
+ 547          //    }
+ 548          //  }
+ 549          // }
+ 550          
+ 551          /**
+ 552           * @brief 横跨左右屏幕的画法
+ 553           *
+ 554           * @param konglong
+ 555           * @param screen_y
+ 556           * @param offset_y
+ 557           */
+ 558          void auxDrawKonglongX(KongLong *konglong, uint8 screen_y, uint8 offset_y)
+ 559          {
+ 560   1        uint8 i;
+ 561   1        uint8 offset_x = 63 - konglong->x;
+ 562   1        // offset 为 0 就正常显示图片
+ 563   1        if (!offset_y)
+ 564   1        {
+ 565   2          /// @note 先画左边
+ 566   2          // 向右移动和向左移动不同
+ 567   2          if (konglong->towards == DIR_RIGHT)
+ 568   2          {
+ 569   3            // 上半部分
+ 570   3            cmd_w12864(0x40 | konglong->x);
+ 571   3            cmd_w12864(0xb8 | screen_y);
+ 572   3            for (i = 0; i < offset_x; i++)
+ 573   3              dat_w12864(konglong->image[i]);
+ 574   3      
+ 575   3            // 下半部分
+ 576   3            cmd_w12864(0x40 | konglong->x);
+ 577   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 578   3            for (i = 0; i < offset_x; i++)
+ 579   3              dat_w12864(konglong->image[i + 16]);
+ 580   3          }
+ 581   2          else
+ 582   2          {
+ 583   3            cmd_w12864(0x40 | konglong->x);
+ 584   3            cmd_w12864(0xb8 | screen_y);
+ 585   3            for (i = 0; i < offset_x; i++)
+ 586   3              dat_w12864(konglong->image[15 - i]);
+ 587   3      
+ 588   3            // 下半部分
+ 589   3            // 处理跨屏
+ 590   3            cmd_w12864(0x40 | konglong->x);
+ 591   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 592   3            // 向右移动和向左移动不同
+ 593   3            for (i = 0; i < offset_x; i++)
+ 594   3              dat_w12864(konglong->image[31 - i]);
+ 595   3          }
+ 596   2      
+ 597   2          /// @note 再画右边
+ 598   2          choose12864(1);
+ 599   2      
+ 600   2          // 向右移动和向左移动不同
+ 601   2          if (konglong->towards == DIR_RIGHT)
+ 602   2          {
+ 603   3            // 上半部分
+ 604   3            cmd_w12864(0x40);
+ 605   3            cmd_w12864(0xb8 | screen_y);
+ 606   3            for (i = offset_x; i < 16; i++)
+ 607   3              dat_w12864(konglong->image[i]);
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 11  
 
- 608   2          for (i = 0; i < 16; i++)
- 609   2            dat_w12864(0x00);
- 610   2        }
- 611   1      }
+ 608   3      
+ 609   3            // 下半部分
+ 610   3            cmd_w12864(0x40);
+ 611   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 612   3            for (i = offset_x; i < 16; i++)
+ 613   3              dat_w12864(konglong->image[i + 16]);
+ 614   3          }
+ 615   2          else
+ 616   2          {
+ 617   3            cmd_w12864(0x40);
+ 618   3            cmd_w12864(0xb8 | screen_y);
+ 619   3            for (i = offset_x; i < 16; i++)
+ 620   3              dat_w12864(konglong->image[15 - i]);
+ 621   3      
+ 622   3            // 下半部分
+ 623   3            // 处理跨屏
+ 624   3            cmd_w12864(0x40);
+ 625   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 626   3            // 向右移动和向左移动不同
+ 627   3            for (i = offset_x; i < 16; i++)
+ 628   3              dat_w12864(konglong->image[31 - i]);
+ 629   3          }
+ 630   2        }
+ 631   1        // 否则，一张图片要拆分成3段
+ 632   1        else
+ 633   1        {
+ 634   2          /// @note 先画左边
+ 635   2          choose12864(0);
+ 636   2      
+ 637   2          if (konglong->towards == DIR_RIGHT)
+ 638   2          {
+ 639   3            // 先画第一段
+ 640   3            cmd_w12864(0x40 | konglong->x);
+ 641   3            cmd_w12864(0xb8 | screen_y);
+ 642   3      
+ 643   3            for (i = 0; i < offset_x; i++)
+ 644   3            {
+ 645   4              segment[0] = 0x00 | (konglong->image[i] << offset_y);
+ 646   4              dat_w12864(segment[0]);
+ 647   4            }
+ 648   3      
+ 649   3            // 第二段
+ 650   3            cmd_w12864(0x40 | konglong->x);
+ 651   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 652   3      
+ 653   3            for (i = 0; i < offset_x; i++)
+ 654   3            {
+ 655   4              segment[0] = (konglong->image[i] >> (8 - offset_y)) | (konglong->image[i + 16] << offset_y);
+ 656   4              dat_w12864(segment[0]);
+ 657   4            }
+ 658   3      
+ 659   3            // 第三段
+ 660   3            cmd_w12864(0x40 | konglong->x);
+ 661   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 662   3      
+ 663   3            for (i = 0; i < offset_x; i++)
+ 664   3            {
+ 665   4              segment[0] = konglong->image[i + 16] >> (8 - offset_y);
+ 666   4              dat_w12864(segment[0]);
+ 667   4            }
+ 668   3          }
+ 669   2          else
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 12  
+
+ 670   2          {
+ 671   3            // 先画第一段
+ 672   3            cmd_w12864(0x40 | konglong->x);
+ 673   3            cmd_w12864(0xb8 | screen_y);
+ 674   3            for (i = 0; i < offset_x; i++)
+ 675   3            {
+ 676   4              segment[0] = 0x00 | (konglong->image[15 - i] << offset_y);
+ 677   4              dat_w12864(segment[0]);
+ 678   4            }
+ 679   3      
+ 680   3            // 第二段
+ 681   3            cmd_w12864(0x40 | konglong->x);
+ 682   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 683   3            for (i = 0; i < offset_x; i++)
+ 684   3            {
+ 685   4              segment[0] = (konglong->image[15 - i] >> (8 - offset_y)) |
+ 686   4                     (konglong->image[31 - i] << offset_y);
+ 687   4              dat_w12864(segment[0]);
+ 688   4            }
+ 689   3      
+ 690   3            // 第三段
+ 691   3            cmd_w12864(0x40 | konglong->x);
+ 692   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 693   3            for (i = 0; i < offset_x; i++)
+ 694   3            {
+ 695   4              segment[0] = konglong->image[31 - i] >> (8 - offset_y);
+ 696   4              dat_w12864(segment[0]);
+ 697   4            }
+ 698   3          }
+ 699   2      
+ 700   2          /// @brief 再画右边
+ 701   2          choose12864(1);
+ 702   2      
+ 703   2          if (konglong->towards == DIR_RIGHT)
+ 704   2          {
+ 705   3            // 先画第一段
+ 706   3            cmd_w12864(0x40);
+ 707   3            cmd_w12864(0xb8 | screen_y);
+ 708   3      
+ 709   3            for (i = offset_x; i < 16; i++)
+ 710   3            {
+ 711   4              segment[0] = 0x00 | (konglong->image[i] << offset_y);
+ 712   4              dat_w12864(segment[0]);
+ 713   4            }
+ 714   3      
+ 715   3            // 第二段
+ 716   3            cmd_w12864(0x40);
+ 717   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 718   3      
+ 719   3            for (i = offset_x; i < 16; i++)
+ 720   3            {
+ 721   4              segment[0] = (konglong->image[i] >> (8 - offset_y)) | (konglong->image[i + 16] << offset_y);
+ 722   4              dat_w12864(segment[0]);
+ 723   4            }
+ 724   3      
+ 725   3            // 第三段
+ 726   3            cmd_w12864(0x40);
+ 727   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 728   3      
+ 729   3            for (i = offset_x; i < 16; i++)
+ 730   3            {
+ 731   4              segment[0] = konglong->image[i + 16] >> (8 - offset_y);
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 13  
+
+ 732   4              dat_w12864(segment[0]);
+ 733   4            }
+ 734   3          }
+ 735   2          else
+ 736   2          {
+ 737   3            // 先画第一段
+ 738   3            cmd_w12864(0x40);
+ 739   3            cmd_w12864(0xb8 | screen_y);
+ 740   3            for (i = offset_x; i < 16; i++)
+ 741   3            {
+ 742   4              segment[0] = 0x00 | (konglong->image[15 - i] << offset_y);
+ 743   4              dat_w12864(segment[0]);
+ 744   4            }
+ 745   3      
+ 746   3            // 第二段
+ 747   3            cmd_w12864(0x40);
+ 748   3            cmd_w12864(0xb8 | (screen_y + 1));
+ 749   3            for (i = offset_x; i < 16; i++)
+ 750   3            {
+ 751   4              segment[0] = (konglong->image[15 - i] >> (8 - offset_y)) |
+ 752   4                     (konglong->image[31 - i] << offset_y);
+ 753   4              dat_w12864(segment[0]);
+ 754   4            }
+ 755   3      
+ 756   3            // 第三段
+ 757   3            cmd_w12864(0x40);
+ 758   3            cmd_w12864(0xb8 | (screen_y + 2));
+ 759   3            for (i = offset_x; i < 16; i++)
+ 760   3            {
+ 761   4              segment[0] = konglong->image[31 - i] >> (8 - offset_y);
+ 762   4              dat_w12864(segment[0]);
+ 763   4            }
+ 764   3          }
+ 765   2      
+ 766   2          // 清除 segment
+ 767   2          segment[0] = 0x00;
+ 768   2          if (konglong->standingBlock != -1)
+ 769   2          {
+ 770   3            for (i = 1; i < 16; i++)
+ 771   3            {
+ 772   4              segment[i] = 0x00;
+ 773   4            }
+ 774   3          }
+ 775   2        }
+ 776   1      }
+ 777          
+ 778          /**
+ 779           * @brief 清除小恐龙下降时产生的残影
+ 780           *
+ 781           */
+ 782          void clearGhost(uint8 x, uint8 screen_y)
+ 783          {
+ 784   1        uint8 i;
+ 785   1        cmd_w12864(0x40 | x);
+ 786   1        cmd_w12864(0xb8 | (screen_y));
+ 787   1        for (i = 0; i < 16; i++)
+ 788   1        {
+ 789   2          dat_w12864(0x00);
+ 790   2        }
+ 791   1      }
+ 792          
+ 793          /**
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 14  
+
+ 794           * @brief 清除一条痕迹
+ 795           *
+ 796           * @param x
+ 797           * @param y
+ 798           */
+ 799          void clearLine(uint8 x, uint8 y)
+ 800          {
+ 801   1        if (x > 63)
+ 802   1        {
+ 803   2          x -= 64;
+ 804   2          choose12864(1);
+ 805   2        }
+ 806   1        else
+ 807   1          choose12864(0);
+ 808   1      
+ 809   1        cmd_w12864(0x40 | x);
+ 810   1        cmd_w12864(0xb8 | y / 8);
+ 811   1        dat_w12864(0x00);
+ 812   1      }
+ 813          
+ 814          // void test()
+ 815          // {
+ 816          //  // uint8 i;
+ 817          
+ 818          //  cmd_w12864(0x34);
+ 819          //  cmd_w12864(0x36);
+ 820          
+ 821          //  choose12864(0);
+ 822          //  cmd_w12864(0x40 | 0);
+ 823          //  cmd_w12864(0xb8 | 0);
+ 824          
+ 825          //  for (i = 0; i < 8; i++)
+ 826          //  {
+ 827          //    dat_w12864(0x01);
+ 828          //  }
+ 829          
+ 830          //  cmd_w12864(0x30);
+ 831          // }
+ 832          
+ 833          // void test2()
+ 834          // {
+ 835          //  // uint8 i;
+ 836          //  uint8 datas[8];
+ 837          
+ 838          //  cmd_w12864(0x34);
+ 839          //  cmd_w12864(0x36);
+ 840          
+ 841          //  choose12864(0);
+ 842          //  cmd_w12864(0x40 | 0);
+ 843          //  cmd_w12864(0xb8 | 0);
+ 844          
+ 845          //  for (i = 0; i < 8; i++)
+ 846          //  {
+ 847          //    dat_r12864();
+ 848          //    datas[i] = dat_r12864() | 0x80;
+ 849          //  }
+ 850          
+ 851          //  cmd_w12864(0x40 | 0);
+ 852          //  cmd_w12864(0xb8 | 3);
+ 853          //  for (i = 0; i < 8; i++)
+ 854          //  {
+ 855          //    dat_w12864(datas[i]);
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 15  
+
+ 856          //  }
+ 857          
+ 858          //  cmd_w12864(0x30);
+ 859          // }
+ 860          
+ 861          // void play8(uint8 x, uint8 y, uint8 *addr)
+ 862          // {
+ 863          //  uint8 i;
+ 864          
+ 865          //  // x>63，说明 x 在右边，选择右屏
+ 866          //  if (x > 63)
+ 867          //  {
+ 868          //    choose12864(1);
+ 869          //    x = x - 64;
+ 870          //  }
+ 871          //  else
+ 872          //    choose12864(0);
+ 873          
+ 874          //  // 写入 x,y 位置
+ 875          //  cmd_w12864(0x40 | x);
+ 876          //  cmd_w12864(0xb8 | (y++));
+ 877          
+ 878          //  // 确保 y 第八位为 0
+ 879          //  if ((y & 0x80) == 0)
+ 880          //    // 写入 8 个 8 位的 16 进制数据
+ 881          //    for (i = 0; i < 8; i++)
+ 882          //      dat_w12864(*addr++);
+ 883          //  else
+ 884          //    for (i = 0; i < 8; i++)
+ 885          //      dat_w12864(0xFF - *addr++);
+ 886          
+ 887          //  // 写入 x, y + 1
+ 888          //  cmd_w12864(0x40 | x);
+ 889          //  cmd_w12864(0xb8 | y);
+ 890          
+ 891          //  if ((y & 0x80) == 0)
+ 892          //    for (i = 0; i < 8; i++)
+ 893          //      dat_w12864(*addr++);
+ 894          //  else
+ 895          //    for (i = 0; i < 8; i++)
+ 896          //      dat_w12864(0xFF - *addr++);
+ 897          // }
+ 898          
+ 899          // void play16(uint8 x, uint8 y, uint8 *addr)
+ 900          // {
+ 901          //  uint8 i;
+ 902          
+ 903          //  if (x > 63)
+ 904          //  {
+ 905          //    choose12864(1);
+ 906          //    x = x - 64;
+ 907          //  }
+ 908          //  else
+ 909          //    choose12864(0);
+ 910          
+ 911          //  cmd_w12864(0x40 | x);
+ 912          //  cmd_w12864(0xb8 | (y++));
+ 913          
+ 914          //  if ((y & 0x80) == 0)
+ 915          //    for (i = 0; i < 16; i++)
+ 916          //      dat_w12864(*addr++);
+ 917          //  else
+C51 COMPILER V9.60.7.0   LCD12864                                                          06/16/2023 15:46:52 PAGE 16  
+
+ 918          //    for (i = 0; i < 16; i++)
+ 919          //      dat_w12864(0xFF - *addr++);
+ 920          
+ 921          //  cmd_w12864(0x40 | x);
+ 922          //  cmd_w12864(0xb8 | y);
+ 923          
+ 924          //  if ((y & 0x80) == 0)
+ 925          //    for (i = 0; i < 16; i++)
+ 926          //      dat_w12864(*addr++);
+ 927          //  else
+ 928          //    for (i = 0; i < 16; i++)
+ 929          //      dat_w12864(0xFF - *addr++);
+ 930          // }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   2135    ----
+   CODE SIZE        =   4073    ----
    CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =   ----    ----
+   XDATA SIZE       =   ----      11
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     48      19
+   DATA SIZE        =     18       9
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =   ----    ----
+   BIT SIZE         =   ----       1
 END OF MODULE INFORMATION.
 
 

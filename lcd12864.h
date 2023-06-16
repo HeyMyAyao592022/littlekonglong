@@ -2,6 +2,7 @@
 #define _LCD_H_
 
 #include "main.h"
+#include "konglong.h"
 
 /**
  * @brief 初始化
@@ -24,39 +25,38 @@ void clear12864(void);
 void clearObject(uint8 x, uint8 y);
 
 /**
- * @brief 显示字符 8x16 (16个8位16进制数据)
+ * @brief 清除一条痕迹
  *
- * @param x 0~128
  * @param y
- * @param addr
- */
-void play8(uint8 x, uint8 y, uint8 *addr);
-
-/**
- * @brief 显示字符 16x16
- *
- * @param x
  * @param y
- * @param addr
  */
-void play16(uint8 x, uint8 y, uint8 *addr);
+void clearLine(uint8 x, uint8 y);
 
 /**
  * @brief 绘小板块
  *
  * @param x
  * @param y
+ * @param standing 表明是否有小恐龙站在上面，或者是否达到了顶层
  */
-void drawBlock(uint8 x, uint8 y);
+void drawBlock(uint8 x, uint8 y, bit standing);
 
 /**
  * @brief 绘图 16x16
  *
- * @param x x 坐标 0~127
- * @param y y 坐标 0~3
- * @param addr 图像数组
- * @param dir 方向
  */
-void drawKonglong(uint8 x, uint8 y, uint8 *addr, int8 dir_horizon, int8 dir_vertical);
+void drawKonglong(KongLong *konglong);
+
+/**
+ * @brief 绘制左右边界的墙
+ *
+ */
+// void drawWall();
+
+/**
+ * @brief 绘制顶部
+ *
+ */
+void drawRoof();
 
 #endif

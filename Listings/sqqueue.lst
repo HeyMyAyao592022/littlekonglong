@@ -1,0 +1,58 @@
+C51 COMPILER V9.60.7.0   SQQUEUE                                                           06/15/2023 09:09:39 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE SQQUEUE
+OBJECT MODULE PLACED IN .\Objects\sqqueue.obj
+COMPILER INVOKED BY: D:\2023stuffs\Keil\C51\BIN\C51.EXE sqqueue.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\sqqueue.lst) TABS(2) OBJECT(.\Objects\sqqueue.obj)
+
+line level    source
+
+   1          // #include "seqqueue.h"
+   2          
+   3          // /**
+   4          //  * @brief 入队
+   5          //  *
+   6          //  * @param q
+   7          //  * @param x
+   8          //  */
+   9          // void EnQueue(SeqQueue *q, ElemType x)
+  10          // {
+  11          //     if (q->size == MaxSize)
+  12          //         return;
+  13          
+  14          //     q->datas[q->rear] = x;
+  15          //     q->rear = (q->rear + 1) % MaxSize;
+  16          //     q->size++;
+  17          // }
+  18          
+  19          // /**
+  20          //  * @brief 出队
+  21          //  *
+  22          //  * @param q
+  23          //  * @param x
+  24          //  * @return bit
+  25          //  */
+  26          // void DeQueue(SeqQueue *q, ElemType *x)
+  27          // {
+  28          //     if (q->size == 0)
+  29          //         return;
+  30          
+  31          //     *x = q->datas[q->front];
+  32          //     q->front = (q->front + 1) % MaxSize;
+  33          //     q->size--;
+  34          // }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
