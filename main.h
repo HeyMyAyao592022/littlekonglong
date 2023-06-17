@@ -25,6 +25,7 @@
 #define KONGLONG_MAX_X 111
 #define KONGLONG_MIN_X 1
 #define KONGLONG_MAX_Y 48
+#define BORDER_X 94
 
 // 小板块最大数量
 #define BLOCK_NUMBER 5

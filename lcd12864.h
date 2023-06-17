@@ -17,6 +17,41 @@ void LCD_init(void);
 void clear12864(void);
 
 /**
+ * @brief 展示 8*16 大小的图片
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play8(uint8 x, uint8 y, uint8 *addr);
+
+/**
+ * @brief 展示 16*16 大小的图片
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play16(uint8 x, uint8 y, uint8 *addr);
+
+/**
+ * @brief 展示 32*32 大小的图片
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play32(uint8 x, uint8 y, uint8 *addr);
+
+/**
+ * @brief 单纯画一片黑色
+ *
+ * @param x
+ * @param y
+ */
+void drawDark(uint8 x, uint8 y);
+
+/**
  * @brief 清楚制定位置的图像
  *
  * @param x
@@ -42,16 +77,31 @@ void clearLine(uint8 x, uint8 y);
 void drawBlock(uint8 x, uint8 y, bit standing);
 
 /**
+ * @brief 绘制小刺
+ *
+ * @param x
+ * @param y
+ */
+void drawThurn(uint8 x, uint8 y);
+
+/**
  * @brief 绘图 16x16
  *
  */
 void drawKonglong(KongLong *konglong);
 
 /**
- * @brief 绘制左右边界的墙
+ * @brief 显示表盘
  *
  */
-// void drawWall();
+void drawPanel();
+
+/**
+ * @brief 显示分数
+ *
+ * @param score
+ */
+void updateScores(uint8 score);
 
 /**
  * @brief 绘制顶部

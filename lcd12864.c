@@ -1,6 +1,30 @@
 #include "lcd12864.h"
 
 /**
+ * @brief 星星
+ *
+ */
+xdata const uint8 img_star[8] =
+	{0x1E, 0x3E, 0x7F, 0x7E,
+	 0x7E, 0x7F, 0x3E, 0x1E};
+
+/**
+ * @brief 数字的图像 4*8大小
+ *
+ */
+xdata const uint8 img_nums[10][4] = {
+	{0x1C, 0x24, 0x22, 0x3C}, /*"0",0*/
+	{0x00, 0x04, 0x3E, 0x00}, /*"1",0*/
+	{0x20, 0x32, 0x32, 0x2C}, /*"2",0*/
+	{0x00, 0x2A, 0x2A, 0x34}, /*"3",0*/
+	{0x10, 0x18, 0x14, 0x3E}, /*"4",0*/
+	{0x00, 0x2E, 0x2A, 0x32}, /*"5",0*/
+	{0x18, 0x34, 0x2A, 0x3A}, /*"6",0*/
+	{0x02, 0x22, 0x1A, 0x06}, /*"7",0*/
+	{0x14, 0x2C, 0x2A, 0x34}, /*"8",0*/
+	{0x0C, 0x34, 0x32, 0x3C}};
+
+/**
  * @brief 辅助显示板块
  *
  */
@@ -11,7 +35,6 @@ void auxDrawBlock(uint8 x, uint8 screen_y, uint8 offset_y);
  *
  * @param konglong
  */
-// void auxDrawKonglong(KongLong *konglong, uint8 x, uint8 screen_y, uint8 offset_y);
 
 /**
  * @brief 辅助显示跨越左右屏幕的恐龙
@@ -238,8 +261,76 @@ void drawBlock(uint8 x, uint8 y, bit standing)
 		segment[0] = (0x0f >> (8 - offset_y));
 		dat_w12864(segment[0]);
 
+		segment[0] = 0x00;
+	}
+}
+
+/**
+ * @brief 绘制小刺
+ *
+ * @param x
+ * @param y
+ */
+void drawThurn(uint8 x, uint8 y)
+{
+	data uint8 i;
+	data uint8 index = 0;
+	screen_y = y / 8; // 算出 y 对应屏幕的 y 坐标
+	offset_y = y % 8; // 算出 y 对 screen_y 的偏移
+
+	// 选择屏幕
+	if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	else
+		choose12864(0);
+
+	if (!(y % 8))
+	{
+		clearLine(x, y + 1);
+	}
+
+	// offset 为 0 就正常显示图片
+	if (!offset_y)
+	{
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | screen_y);
+
+		dat_w12864(0x0f);
+		for (i = 1; i < 15; i++)
+			dat_w12864(blockDot);
+		dat_w12864(0x0f);
+	}
+	// 否则，一张图片要拆分成2段
+	else
+	{
+		// 先画第一段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y));
+
+		// 第一段
 		for (i = 0; i < 16; i++)
-			segment[0] = 0x00;
+		{
+			if (index++ % 2)
+				segment[0] = (blockDotThorn1 << offset_y) | 0x00;
+			else
+				segment[0] = (blockDotThorn2 << offset_y) | 0x00;
+			dat_w12864(segment[0]);
+		}
+
+		// 再画第二段
+		cmd_w12864(0x40 | x);
+		cmd_w12864(0xb8 | (screen_y + 1));
+
+		for (i = 0; i < 16; i++)
+		{
+			segment[0] = (0x0f >> (8 - offset_y));
+			dat_w12864(segment[0]);
+		}
+
+		segment[0] = 0x00;
 	}
 }
 
@@ -440,18 +531,6 @@ void clearObject(uint8 x, uint8 y)
 	}
 }
 
-// void drawWall()
-// {
-// 	uint8 i;
-// 	choose12864(0);
-// 	for (i = 0; i < 8; i++)
-// 	{
-// 		cmd_w12864(0x40 | 63);
-// 		cmd_w12864(0xb8 | i);
-// 		dat_w12864(0xff);
-// 	}
-// }
-
 void drawRoof()
 {
 	data uint8 i;
@@ -516,44 +595,6 @@ void auxDrawBlock(uint8 x, uint8 screen_y, uint8 offset_y)
 		dat_w12864(segment[i]);
 	}
 }
-
-/**
- * @brief 用复杂绘图法画第三段
- *
- * @param konglong
- * @param x
- * @param screen_y
- * @param offset_y
- */
-// void auxDrawKonglong(KongLong *konglong, uint8 x, uint8 screen_y, uint8 offset_y)
-// {
-// 	uint8 i;
-
-// 	// 指令已经在调用该函数前写入了
-// 	for (i = 0; i < 16; i++)
-// 	{
-// 		dat_r12864();
-// 		segment[i] = konglong->image[i + 16] >> (8 - offset_y) | dat_r12864();
-// 	}
-
-// 	cmd_w12864(0x40 | x);
-// 	cmd_w12864(0xb8 | (screen_y + 2));
-
-// 	if (konglong->towards == DIR_RIGHT)
-// 	{
-// 		for (i = 0; i < 16; i++)
-// 		{
-// 			dat_w12864(segment[i]);
-// 		}
-// 	}
-// 	else
-// 	{
-// 		for (i = 0; i < 16; i++)
-// 		{
-// 			dat_w12864(segment[15 - i]);
-// 		}
-// 	}
-// }
 
 /**
  * @brief 横跨左右屏幕的画法
@@ -818,120 +859,170 @@ void clearLine(uint8 x, uint8 y)
 	dat_w12864(0x00);
 }
 
-// void test()
-// {
-// 	// uint8 i;
+/**
+ * @brief 显示表盘
+ *
+ */
+void drawPanel()
+{
+	uint8 i;
+	choose12864(1);
+	// 画星星
+	cmd_w12864(0x40 | 38);
+	cmd_w12864(0xb8 | 1);
+	for (i = 0; i < 8; ++i)
+	{
+		dat_w12864(img_star[i]);
+	}
+}
 
-// 	cmd_w12864(0x34);
-// 	cmd_w12864(0x36);
+/**
+ * @brief 显示分数
+ *
+ * @param score
+ */
+void updateScores(uint8 score)
+{
+	uint8 digit;
+	uint8 i;
 
-// 	choose12864(0);
-// 	cmd_w12864(0x40 | 0);
-// 	cmd_w12864(0xb8 | 0);
+	choose12864(1);
 
-// 	for (i = 0; i < 8; i++)
-// 	{
-// 		dat_w12864(0x01);
-// 	}
+	digit = score % 10;
+	cmd_w12864(0x40 | 54);
+	cmd_w12864(0xb8 | 1);
+	for (i = 0; i < 4; i++)
+	{
+		dat_w12864(img_nums[digit][i]);
+	}
 
-// 	cmd_w12864(0x30);
-// }
+	digit = score / 10;
+	cmd_w12864(0x40 | 46);
+	cmd_w12864(0xb8 | 1);
+	for (i = 0; i < 4; i++)
+	{
+		dat_w12864(img_nums[digit][i]);
+	}
+}
 
-// void test2()
-// {
-// 	// uint8 i;
-// 	uint8 datas[8];
+/**
+ * @brief 8*16 大小字符
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play8(uint8 x, uint8 y, uint8 *addr)
+{
+	uint8 i;
 
-// 	cmd_w12864(0x34);
-// 	cmd_w12864(0x36);
+	// x>63，说明 x 在右边，选择右屏
+	if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	else
+		choose12864(0);
 
-// 	choose12864(0);
-// 	cmd_w12864(0x40 | 0);
-// 	cmd_w12864(0xb8 | 0);
+	// 写入 x,y 位置
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | y);
 
-// 	for (i = 0; i < 8; i++)
-// 	{
-// 		dat_r12864();
-// 		datas[i] = dat_r12864() | 0x80;
-// 	}
+	// 写入 8 个 8 位的 16 进制数据
+	for (i = 0; i < 8; i++)
+		dat_w12864(*addr++);
+}
 
-// 	cmd_w12864(0x40 | 0);
-// 	cmd_w12864(0xb8 | 3);
-// 	for (i = 0; i < 8; i++)
-// 	{
-// 		dat_w12864(datas[i]);
-// 	}
+/**
+ * @brief 16*16大小字符
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play16(uint8 x, uint8 y, uint8 *addr)
+{
+	uint8 i;
 
-// 	cmd_w12864(0x30);
-// }
+	if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	else
+		choose12864(0);
 
-// void play8(uint8 x, uint8 y, uint8 *addr)
-// {
-// 	uint8 i;
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | y);
+	for (i = 0; i < 16; i++)
+		dat_w12864(*addr++);
 
-// 	// x>63，说明 x 在右边，选择右屏
-// 	if (x > 63)
-// 	{
-// 		choose12864(1);
-// 		x = x - 64;
-// 	}
-// 	else
-// 		choose12864(0);
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | (y + 1));
+	for (i = 0; i < 16; i++)
+		dat_w12864(*addr++);
+}
 
-// 	// 写入 x,y 位置
-// 	cmd_w12864(0x40 | x);
-// 	cmd_w12864(0xb8 | (y++));
+/**
+ * @brief 展示 32*32 大小的图片
+ *
+ * @param x
+ * @param y
+ * @param addr
+ */
+void play32(uint8 x, uint8 y, uint8 *addr)
+{
+	uint8 i;
 
-// 	// 确保 y 第八位为 0
-// 	if ((y & 0x80) == 0)
-// 		// 写入 8 个 8 位的 16 进制数据
-// 		for (i = 0; i < 8; i++)
-// 			dat_w12864(*addr++);
-// 	else
-// 		for (i = 0; i < 8; i++)
-// 			dat_w12864(0xFF - *addr++);
+	if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	else
+		choose12864(0);
 
-// 	// 写入 x, y + 1
-// 	cmd_w12864(0x40 | x);
-// 	cmd_w12864(0xb8 | y);
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | y);
+	for (i = 0; i < 32; i++)
+		dat_w12864(*addr++);
 
-// 	if ((y & 0x80) == 0)
-// 		for (i = 0; i < 8; i++)
-// 			dat_w12864(*addr++);
-// 	else
-// 		for (i = 0; i < 8; i++)
-// 			dat_w12864(0xFF - *addr++);
-// }
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | (y + 1));
+	for (i = 0; i < 32; i++)
+		dat_w12864(*addr++);
 
-// void play16(uint8 x, uint8 y, uint8 *addr)
-// {
-// 	uint8 i;
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | (y + 2));
+	for (i = 0; i < 32; i++)
+		dat_w12864(*addr++);
 
-// 	if (x > 63)
-// 	{
-// 		choose12864(1);
-// 		x = x - 64;
-// 	}
-// 	else
-// 		choose12864(0);
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | (y + 3));
+	for (i = 0; i < 32; i++)
+		dat_w12864(*addr++);
+}
 
-// 	cmd_w12864(0x40 | x);
-// 	cmd_w12864(0xb8 | (y++));
+/**
+ * @brief 画黑色
+ *
+ * @param x
+ * @param y
+ */
+void drawDark(uint8 x, uint8 y)
+{
+	uint8 i;
 
-// 	if ((y & 0x80) == 0)
-// 		for (i = 0; i < 16; i++)
-// 			dat_w12864(*addr++);
-// 	else
-// 		for (i = 0; i < 16; i++)
-// 			dat_w12864(0xFF - *addr++);
+	if (x > 63)
+	{
+		choose12864(1);
+		x = x - 64;
+	}
+	else
+		choose12864(0);
 
-// 	cmd_w12864(0x40 | x);
-// 	cmd_w12864(0xb8 | y);
-
-// 	if ((y & 0x80) == 0)
-// 		for (i = 0; i < 16; i++)
-// 			dat_w12864(*addr++);
-// 	else
-// 		for (i = 0; i < 16; i++)
-// 			dat_w12864(0xFF - *addr++);
-// }
+	cmd_w12864(0x40 | x);
+	cmd_w12864(0xb8 | y);
+	dat_w12864(0xff);
+}

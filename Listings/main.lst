@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 1   
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
@@ -46,387 +46,674 @@ line level    source
   36           */
   37          void updateBlockPos();
   38          
-  39          /// @brief 游戏的状态
-  40          data uint8 gameStatus = STATUS_RUNNING;
-  41          data uint8 gameScores = 0;
-  42          
-  43          /// @brief 小恐龙
-  44          data KongLong konglongBo = {KONGLONG_MIN_X, BLCOK_MAX_Y - 16, img_monster,
-  45                        DIR_STILL, DIR_UP, DIR_LEFT, DEFUALT_STANDINGBLCOK};
-  46          
-  47          /// @brief 小板块
-  48          data Block blocks[] = {
-  49            {KONGLONG_MIN_X, BLCOK_MAX_Y},
-  50            {30, BLCOK_MAX_Y + 31},
-  51            {30, BLCOK_MAX_Y + 73},
-  52            {80, BLCOK_MAX_Y + 117},
-  53            {110, BLCOK_MAX_Y + 151}};
-  54          
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 2   
+  39          /**
+  40           * @brief 更新小刺
+  41           *
+  42           */
+  43          void generateThurn();
+  44          
+  45          /**
+  46           * @brief 更新小刺的纵坐标
+  47           *
+  48           */
+  49          void updateThurnPos();
+  50          
+  51          /**
+  52           * @brief 检测是否碰到小刺
+  53           *
+  54           */
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 2   
 
-  55          /// @brief 定时器计数
-  56          data uint8 counter1 = 0;
-  57          data uint8 counter2 = 0;
-  58          
-  59          /// @brief 定时器发出的信号，在主函数中相应
-  60          data bit onUpdateKonglong1 = 0;
-  61          data bit onUpdateKonglong2 = 0;
-  62          data bit onUpdateBlock = 0;
-  63          data bit onRedrawRoof = 0;
-  64          // data bit onRedrawWall = 0;
-  65          data bit onCheckStanding = 1;
-  66          
-  67          /// @brief 给小板块生成新的 x 坐标
-  68          xdata uint8 blockHorizonPos[] = {30, 4, 45, 70, 110, 90};
-  69          data uint8 currentHorizonPos = 0;
-  70          #define BLOCK_HORIZON_POS_MAX 6
-  71          
-  72          void main(void)
-  73          {
-  74   1        // 遍历
-  75   1        data uint8 i;
-  76   1      
-  77   1        // 按下 key1 开始
-  78   1        while (1)
-  79   1        {
-  80   2          // 按 key1 开始
-  81   2          if (!KeyIn1)
-  82   2          {
-  83   3            delay(10);
-  84   3            break;
-  85   3          }
-  86   2        }
-  87   1      
-  88   1        // 初始化定时器
-  89   1        initializeTimer();
-  90   1      
-  91   1        // 初始化屏幕
-  92   1        LCD_init();
-  93   1        delay(5);
-  94   1      
-  95   1        // 画顶部
-  96   1        drawRoof();
-  97   1        // drawWall();
-  98   1      
-  99   1        // 只要游戏还在运行中，那就不退出循环
- 100   1        // game statues 为 0 则说明在运行中
- 101   1        while (!gameStatus)
- 102   1        {
- 103   2          //  绘图
- 104   2          if (konglongBo.standingBlock != -1)
- 105   2          {
- 106   3            drawBlock(blocks[konglongBo.standingBlock].x, blocks[konglongBo.standingBlock].y,
- 107   3                  1);
- 108   3          }
- 109   2          drawKonglong(&konglongBo);
- 110   2          for (i = 0; i < BLOCK_NUMBER; i++)
- 111   2          {
- 112   3            if ((i != (konglongBo.standingBlock)) && (blocks[i].y <= BLCOK_MAX_Y))
- 113   3              drawBlock(blocks[i].x, blocks[i].y, blocks[i].y <= 7);
- 114   3          }
- 115   2      
- 116   2          // scan key
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 3   
+  55          void checkStandingThurn();
+  56          
+  57          /**
+  58           * @brief 开始界面
+  59           *
+  60           */
+  61          void startScreen();
+  62          
+  63          /**
+  64           * @brief 结束界面
+  65           *
+  66           */
+  67          void endScreen();
+  68          
+  69          /// @brief 游戏的状态
+  70          data uint8 gameStatus = STATUS_RUNNING;
+  71          data uint8 gameScores = 12;
+  72          
+  73          /// @brief 小恐龙
+  74          data KongLong konglongBo = {KONGLONG_MIN_X, BLCOK_MAX_Y - 16, img_konglong,
+  75                        DIR_STILL, DIR_UP, DIR_LEFT, DEFUALT_STANDINGBLCOK};
+  76          
+  77          /// @brief 小板块
+  78          data Block blocks[] = {
+  79            {KONGLONG_MIN_X, BLCOK_MAX_Y},
+  80            {30, BLCOK_MAX_Y + 31},
+  81            {25, BLCOK_MAX_Y + 73},
+  82            {65, BLCOK_MAX_Y + 117},
+  83            {88, BLCOK_MAX_Y + 151}};
+  84          
+  85          /// @brief 定时器计数
+  86          data uint8 counter1 = 1;
+  87          data uint8 counter2 = 1;
+  88          
+  89          /// @brief 定时器发出的信号，在主函数中相应
+  90          data bit onUpdateKonglong1 = 0;
+  91          data bit onUpdateKonglong2 = 0;
+  92          data bit onUpdateBlock = 0;
+  93          data bit onRedrawRoof = 1;
+  94          data bit onCheckStanding = 1;
+  95          data bit onPanel = 1;
+  96          data bit onScore = 1;
+  97          
+  98          /// @brief 小刺出现的信号
+  99          data bit onThurn = 0;
+ 100          /// @brief 小刺是否出现的标志
+ 101          data bit thurnShow = 0;
+ 102          /// @brief 小刺
+ 103          data Block thurnBlock = {0, 0};
+ 104          
+ 105          /// @brief 给小板块生成新的 x 坐标
+ 106          xdata uint8 blockHorizonPos[] = {23, 4, 45, 65, 84, 75};
+ 107          data uint8 currentHorizonPos = 0;
+ 108          #define BLOCK_HORIZON_POS_MAX 6
+ 109          
+ 110          void main(void)
+ 111          {
+ 112   1        // 遍历
+ 113   1        data uint8 i;
+ 114   1      
+ 115   1        // 初始化定时器
+ 116   1        initializeTimer();
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 3   
 
- 117   2          if (!KeyIn1) // 向左
- 118   2          {
- 119   3            // 改变方向，则需要清除残影
- 120   3            if (konglongBo.towards == DIR_RIGHT)
- 121   3            {
- 122   4              clearLine(konglongBo.x, konglongBo.y);
- 123   4            }
- 124   3            konglongBo.horizon_direction = DIR_LEFT;
- 125   3            konglongBo.towards = DIR_LEFT;
- 126   3          }
- 127   2          else if (!KeyIn2) // 向右
- 128   2          {
- 129   3            // 改变方向，则需要清除残影
- 130   3            if (konglongBo.towards == DIR_LEFT)
- 131   3            {
- 132   4              clearLine(konglongBo.x, konglongBo.y);
- 133   4            }
- 134   3            konglongBo.horizon_direction = DIR_RIGHT;
- 135   3            konglongBo.towards = DIR_RIGHT;
- 136   3          }
- 137   2          else
- 138   2            konglongBo.horizon_direction = DIR_STILL;
- 139   2      
- 140   2          if (onCheckStanding)
- 141   2          {
- 142   3            onCheckStanding = 0;
- 143   3            checkStandingBlock();
- 144   3          }
- 145   2      
- 146   2          if (onUpdateKonglong1)
- 147   2          {
- 148   3            onUpdateKonglong1 = 0;
- 149   3            updataKonglongHorizonPos();
- 150   3          }
- 151   2      
- 152   2          if (onUpdateKonglong2)
- 153   2          {
- 154   3            onUpdateKonglong2 = 0;
- 155   3            updataKonglongVerticalPos();
- 156   3          }
- 157   2      
- 158   2          if (onUpdateBlock)
- 159   2          {
- 160   3            onUpdateBlock = 0;
- 161   3            updateBlockPos();
- 162   3          }
- 163   2      
- 164   2          if (onRedrawRoof)
- 165   2          {
- 166   3            onRedrawRoof = 0;
- 167   3            drawRoof();
- 168   3          }
- 169   2      
- 170   2          // if (onRedrawWall)
- 171   2          // {
- 172   2          //  onRedrawWall = 0;
- 173   2          //  drawWall();
- 174   2          // }
- 175   2        }
- 176   1      
- 177   1        // 若退出上面的循环，说明游戏结束，显示结果界面
- 178   1        clear12864();
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 4   
+ 117   1      
+ 118   1        // 初始化屏幕
+ 119   1        LCD_init();
+ 120   1        delay(5);
+ 121   1      
+ 122   1        while (1)
+ 123   1        {
+ 124   2          // 启动界面
+ 125   2          startScreen();
+ 126   2      
+ 127   2          // 只要游戏还在运行中，那就不退出循环
+ 128   2          // game statues 为 0 则说明在运行中
+ 129   2          while (!gameStatus)
+ 130   2          {
+ 131   3            //  绘图
+ 132   3            if (konglongBo.standingBlock != -1)
+ 133   3            {
+ 134   4              drawBlock(blocks[konglongBo.standingBlock].x, blocks[konglongBo.standingBlock].y,
+ 135   4                    1);
+ 136   4            }
+ 137   3            drawKonglong(&konglongBo);
+ 138   3            for (i = 0; i < BLOCK_NUMBER; i++)
+ 139   3            {
+ 140   4              if ((i != (konglongBo.standingBlock)) && (blocks[i].y <= BLCOK_MAX_Y))
+ 141   4                drawBlock(blocks[i].x, blocks[i].y, blocks[i].y <= 7);
+ 142   4            }
+ 143   3      
+ 144   3            // 绘制小刺
+ 145   3            if (thurnShow)
+ 146   3            {
+ 147   4              if (thurnBlock.y <= BLCOK_MAX_Y)
+ 148   4                drawThurn(thurnBlock.x, thurnBlock.y);
+ 149   4            }
+ 150   3      
+ 151   3            // 绘制表盘
+ 152   3            if (onPanel)
+ 153   3            {
+ 154   4              onPanel = 0;
+ 155   4              drawPanel();
+ 156   4            }
+ 157   3      
+ 158   3            // 绘制边界
+ 159   3            if (onRedrawRoof)
+ 160   3            {
+ 161   4              onRedrawRoof = 0;
+ 162   4              drawRoof();
+ 163   4            }
+ 164   3      
+ 165   3            // 更新分数
+ 166   3            if (onScore)
+ 167   3            {
+ 168   4              onScore = 0;
+ 169   4              if (gameScores <= 99)
+ 170   4                updateScores(gameScores);
+ 171   4            }
+ 172   3      
+ 173   3            // 扫码按键
+ 174   3            if (!KeyIn1) // 向左
+ 175   3            {
+ 176   4              // 改变方向，则需要清除残影
+ 177   4              if (konglongBo.towards == DIR_RIGHT)
+ 178   4              {
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 4   
 
- 179   1      
- 180   1        while (1)
- 181   1        {
- 182   2        }
- 183   1      }
- 184          
- 185          /**
- 186           * @brief 毫秒延迟
- 187           *
- 188           * @param n
- 189           */
- 190          void delay(uint8 n) // 延时ms级
- 191          {
- 192   1        data uint8 counter;
- 193   1        while (n--)
- 194   1        {
- 195   2          counter = 110;
- 196   2          while (--counter)
- 197   2            ;
- 198   2        }
- 199   1      }
- 200          
- 201          /**
- 202           * @brief 初始化定时器
- 203           *
- 204           */
- 205          void initializeTimer()
- 206          {
- 207   1        TMOD = 0x11;        // 定时器0、1使用模式一
- 208   1        TL0 = (65535 - 9216) % 256; // 10ms 中断一次
- 209   1        TH0 = (65535 - 9216) / 256;
- 210   1        TL1 = 0xff;
- 211   1        TH1 = 0xff;
- 212   1      
- 213   1        TR0 = 1; // 定时器0 开始
- 214   1        ET0 = 1; // 允许定时器0
- 215   1        TR1 = 1;
- 216   1        ET1 = 1;
- 217   1      
- 218   1        EA = 1;  // 允许定时
- 219   1        PT0 = 1; // 优先级
- 220   1      }
- 221          
- 222          /**
- 223           * @brief 定时器 0
- 224           *
- 225           */
- 226          void onTimer1() interrupt 1
- 227          {
- 228   1        // counter 用于计数
- 229   1        ++counter1;
- 230   1      
- 231   1        // 定时器重新装初值
- 232   1        TH0 = (65535 - 9216) / 256;
- 233   1        TL0 = (65535 - 9216) % 256;
- 234   1      
- 235   1        // 每50ms
- 236   1        if (!(counter1 % 5) && counter1)
- 237   1        {
- 238   2          onUpdateKonglong1 = 1;
- 239   2        }
- 240   1      
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 5   
+ 179   5                clearLine(konglongBo.x, konglongBo.y);
+ 180   5              }
+ 181   4              konglongBo.horizon_direction = DIR_LEFT;
+ 182   4              konglongBo.towards = DIR_LEFT;
+ 183   4            }
+ 184   3            else if (!KeyIn2) // 向右
+ 185   3            {
+ 186   4              // 改变方向，则需要清除残影
+ 187   4              if (konglongBo.towards == DIR_LEFT)
+ 188   4              {
+ 189   5                clearLine(konglongBo.x, konglongBo.y);
+ 190   5              }
+ 191   4              konglongBo.horizon_direction = DIR_RIGHT;
+ 192   4              konglongBo.towards = DIR_RIGHT;
+ 193   4            }
+ 194   3            else
+ 195   3              konglongBo.horizon_direction = DIR_STILL;
+ 196   3      
+ 197   3            // 检查小恐龙是否站在小板块上面
+ 198   3            if (onCheckStanding)
+ 199   3            {
+ 200   4              onCheckStanding = 0;
+ 201   4              checkStandingBlock();
+ 202   4      
+ 203   4              // 如果小刺出现，那也检测小刺
+ 204   4              if (thurnShow)
+ 205   4              {
+ 206   5                checkStandingThurn();
+ 207   5              }
+ 208   4            }
+ 209   3      
+ 210   3            // 更新小恐龙 x 坐标
+ 211   3            if (onUpdateKonglong1)
+ 212   3            {
+ 213   4              onUpdateKonglong1 = 0;
+ 214   4              updataKonglongHorizonPos();
+ 215   4            }
+ 216   3      
+ 217   3            // 更新小恐龙 y 坐标
+ 218   3            if (onUpdateKonglong2)
+ 219   3            {
+ 220   4              onUpdateKonglong2 = 0;
+ 221   4              updataKonglongVerticalPos();
+ 222   4            }
+ 223   3      
+ 224   3            // 更新小板块坐标
+ 225   3            if (onUpdateBlock)
+ 226   3            {
+ 227   4              onUpdateBlock = 0;
+ 228   4              updateBlockPos();
+ 229   4      
+ 230   4              // 如果小刺出现，那也更新小刺的坐标
+ 231   4              if (thurnShow)
+ 232   4              {
+ 233   5                updateThurnPos();
+ 234   5              }
+ 235   4            }
+ 236   3      
+ 237   3            // 更新小刺
+ 238   3            if (onThurn)
+ 239   3            {
+ 240   4              onThurn = 0;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 5   
 
- 241   1        // 更新小恐龙垂直位移
- 242   1        if (!(counter1 % 10) && counter1)
- 243   1        {
- 244   2          onUpdateKonglong2 = 1;
- 245   2        }
- 246   1      
- 247   1        // 更新小板块的坐标
- 248   1        if (!(counter1 % 10) && counter1)
- 249   1        {
- 250   2          onUpdateBlock = 1;
- 251   2        }
- 252   1      }
- 253          
- 254          /**
- 255           * @brief 定时器 1
- 256           *
- 257           */
- 258          void onTimer2() interrupt 3
- 259          {
- 260   1        if (!(counter2++ % 50) && counter2)
- 261   1        {
- 262   2          onRedrawRoof = 1;
- 263   2        }
- 264   1      }
- 265          
- 266          void checkStandingBlock()
- 267          {
- 268   1        data int8 standingFlag = -1;
- 269   1        data uint8 diff;
- 270   1        data uint8 i;
- 271   1      
- 272   1        // 如果小恐龙之前站在小板块上，则判断它是否离开了板块
- 273   1        if (konglongBo.standingBlock != -1)
- 274   1        {
- 275   2          if ((konglongBo.y + 16) > blocks[konglongBo.standingBlock].y)
- 276   2            diff = (konglongBo.y + 16) - blocks[konglongBo.standingBlock].y;
- 277   2          else
- 278   2            diff = blocks[konglongBo.standingBlock].y - (konglongBo.y + 16);
- 279   2          if (diff <= 3 &&
- 280   2            ((konglongBo.x + 10) >= blocks[konglongBo.standingBlock].x &&
- 281   2             konglongBo.x <= (blocks[konglongBo.standingBlock].x + 15)))
- 282   2          {
- 283   3            // 如果小恐龙还站在那块板子上，就不需要重新检测了
- 284   3            goto skipCheckStanding;
- 285   3          }
- 286   2          else
- 287   2            // 如果小恐龙离开了那块板子，就需要重新检测
- 288   2            goto checkStanding;
- 289   2        }
- 290   1        else
- 291   1        {
- 292   2        checkStanding:
- 293   2          // 碰撞检测，判断小恐龙是否站在小板块上
- 294   2          for (i = 0; i < BLOCK_NUMBER; i++)
- 295   2          {
- 296   3            if ((konglongBo.y + 16) > blocks[i].y)
- 297   3              diff = (konglongBo.y + 16) - blocks[i].y;
- 298   3            else
- 299   3              diff = blocks[i].y - (konglongBo.y + 16);
- 300   3            if (diff <= 3 &&
- 301   3              (konglongBo.x + 10 >= blocks[i].x && konglongBo.x <= (blocks[i].x + 15)))
- 302   3            {
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 6   
+ 241   4              generateThurn();
+ 242   4            }
+ 243   3          }
+ 244   2      
+ 245   2          // 结束界面
+ 246   2          clear12864();
+ 247   2          endScreen();
+ 248   2        }
+ 249   1      }
+ 250          
+ 251          /**
+ 252           * @brief 毫秒延迟
+ 253           *
+ 254           * @param n
+ 255           */
+ 256          void delay(uint8 n) // 延时ms级
+ 257          {
+ 258   1        data uint8 counter;
+ 259   1        while (n--)
+ 260   1        {
+ 261   2          counter = 110;
+ 262   2          while (--counter)
+ 263   2            ;
+ 264   2        }
+ 265   1      }
+ 266          
+ 267          /**
+ 268           * @brief 初始化定时器
+ 269           *
+ 270           */
+ 271          void initializeTimer()
+ 272          {
+ 273   1        TMOD = 0x11;        // 定时器0、1使用模式一
+ 274   1        TL0 = (65535 - 9216) % 256; // 10ms 中断一次
+ 275   1        TH0 = (65535 - 9216) / 256;
+ 276   1        TL1 = 0xff;
+ 277   1        TH1 = 0xff;
+ 278   1      
+ 279   1        TR0 = 1; // 定时器0 开始
+ 280   1        ET0 = 1; // 允许定时器0
+ 281   1        TR1 = 1;
+ 282   1        ET1 = 1;
+ 283   1      
+ 284   1        EA = 1;  // 允许定时
+ 285   1        PT0 = 1; // 优先级
+ 286   1      }
+ 287          
+ 288          /**
+ 289           * @brief 定时器 0
+ 290           *
+ 291           */
+ 292          void onTimer1() interrupt 1
+ 293          {
+ 294   1        // counter 用于计数
+ 295   1        ++counter1;
+ 296   1      
+ 297   1        // 定时器重新装初值
+ 298   1        TH0 = (65535 - 9216) / 256;
+ 299   1        TL0 = (65535 - 9216) % 256;
+ 300   1      
+ 301   1        // 每50ms
+ 302   1        if (!(counter1 % 5))
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 6   
 
- 303   4              konglongBo.vertical_direction = DIR_UP;
- 304   4              // 让小恐龙的 y 坐标与板块保持一直
- 305   4              konglongBo.y = blocks[i].y - 16;
- 306   4              standingFlag = i;
- 307   4              break;
- 308   4            }
- 309   3          }
- 310   2          // 如果发现小恐龙没有站在任何小板块上，则让小恐龙一直下落
- 311   2          konglongBo.standingBlock = standingFlag;
- 312   2          if (konglongBo.standingBlock == -1)
- 313   2          {
- 314   3            konglongBo.vertical_direction = DIR_DOWN;
- 315   3          }
- 316   2        }
- 317   1      skipCheckStanding:;
+ 303   1        {
+ 304   2          onUpdateKonglong1 = 1;
+ 305   2        }
+ 306   1      
+ 307   1        // 更新小恐龙垂直位移
+ 308   1        if (!(counter1 % 10))
+ 309   1        {
+ 310   2          onUpdateKonglong2 = 1;
+ 311   2        }
+ 312   1      
+ 313   1        // 更新小板块的坐标
+ 314   1        if (!(counter1 % 10))
+ 315   1        {
+ 316   2          onUpdateBlock = 1;
+ 317   2        }
  318   1      }
  319          
- 320          void updataKonglongHorizonPos()
- 321          {
- 322   1        //  更新小恐龙水平位移
- 323   1        switch (konglongBo.horizon_direction)
- 324   1        {
- 325   2        case DIR_LEFT: // 向左
- 326   2          if (konglongBo.x > KONGLONG_MIN_X)
- 327   2          {
- 328   3            --konglongBo.x;
- 329   3            // 移动后需要检查是否站在小板块上面
- 330   3            onCheckStanding = 1;
- 331   3          }
- 332   2          break;
- 333   2        case DIR_RIGHT: // 向右
- 334   2          if (konglongBo.x < 111)
- 335   2          {
- 336   3            ++konglongBo.x;
- 337   3            // 移动后需要检查是否站在小板块上面
- 338   3            onCheckStanding = 1;
- 339   3          }
- 340   2          break;
- 341   2        default:
- 342   2          break;
- 343   2        }
- 344   1      }
- 345          
- 346          void updataKonglongVerticalPos()
- 347          {
- 348   1        // 更新小恐龙垂直位移
- 349   1        switch (konglongBo.vertical_direction)
- 350   1        {
- 351   2        case DIR_UP: // 向上
- 352   2          if (konglongBo.standingBlock != -1)
- 353   2          {
- 354   3            konglongBo.y = blocks[konglongBo.standingBlock].y - 16;
- 355   3            // 如果恐龙的 y 比 1 小，说明我们输了
- 356   3            if (konglongBo.y < BLOCK_MIN_Y)
- 357   3            {
- 358   4              gameStatus = STATUS_LOSE;
- 359   4            }
- 360   3          }
- 361   2          break;
- 362   2        case DIR_DOWN: // 向下
- 363   2          if (konglongBo.y < KONGLONG_MAX_Y)
- 364   2          {
-C51 COMPILER V9.60.7.0   MAIN                                                              06/16/2023 15:44:55 PAGE 7   
+ 320          /**
+ 321           * @brief 定时器 1
+ 322           *
+ 323           */
+ 324          void onTimer2() interrupt 3
+ 325          {
+ 326   1        ++counter2;
+ 327   1      
+ 328   1        if (!(counter2 % 50))
+ 329   1        {
+ 330   2          onRedrawRoof = 1;
+ 331   2        }
+ 332   1      
+ 333   1        if (!(counter2 % 150))
+ 334   1        {
+ 335   2          onPanel = 1;
+ 336   2          onScore = 1;
+ 337   2        }
+ 338   1      
+ 339   1        if (!(counter2 % 100) && !thurnShow)
+ 340   1        {
+ 341   2          onThurn = 1;
+ 342   2        }
+ 343   1      }
+ 344          
+ 345          /**
+ 346           * @brief 碰撞检测
+ 347           *
+ 348           */
+ 349          void checkStandingBlock()
+ 350          {
+ 351   1        data int8 standingFlag = -1;
+ 352   1        data uint8 diff;
+ 353   1        data uint8 i;
+ 354   1      
+ 355   1        // 如果小恐龙之前站在小板块上，则判断它是否离开了板块
+ 356   1        if (konglongBo.standingBlock != -1)
+ 357   1        {
+ 358   2          if ((konglongBo.y + 16) > blocks[konglongBo.standingBlock].y)
+ 359   2            diff = (konglongBo.y + 16) - blocks[konglongBo.standingBlock].y;
+ 360   2          else
+ 361   2            diff = blocks[konglongBo.standingBlock].y - (konglongBo.y + 16);
+ 362   2          if (diff <= 3 &&
+ 363   2            ((konglongBo.x + 10) >= blocks[konglongBo.standingBlock].x &&
+ 364   2             konglongBo.x <= (blocks[konglongBo.standingBlock].x + 15)))
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 7   
 
- 365   3            ++konglongBo.y;
- 366   3            // 移动后需要检查是否站在小板块上面
- 367   3            onCheckStanding = 1;
+ 365   2          {
+ 366   3            // 如果小恐龙还站在那块板子上，就不需要重新检测了
+ 367   3            goto skipCheckStanding;
  368   3          }
  369   2          else
- 370   2            // 如果恐龙的 y 比 规定的y最大值 大，说明我们输了
- 371   2            gameStatus = STATUS_LOSE;
- 372   2          break;
- 373   2        default:
- 374   2          break;
- 375   2        }
- 376   1      }
- 377          
- 378          void updateBlockPos()
- 379          {
- 380   1        data uint8 i;
- 381   1        for (i = 0; i < BLOCK_NUMBER; i++)
- 382   1        {
- 383   2          if (blocks[i].y > BLOCK_MIN_Y)
- 384   2            --blocks[i].y;
- 385   2          // 回收小板块
- 386   2          else
- 387   2          {
- 388   3            clearObject(blocks[i].x, blocks[i].y);
- 389   3            onRedrawRoof = 1;
- 390   3            // 重置小板块的 y
- 391   3            blocks[i].x = blockHorizonPos[(currentHorizonPos++) % BLOCK_HORIZON_POS_MAX];
- 392   3            blocks[i].y = BLCOK_MAX_Y + 53;
- 393   3          }
- 394   2        }
- 395   1        // 移动后需要检查是否站在小板块上面
- 396   1        onCheckStanding = 1;
- 397   1      }
+ 370   2            // 如果小恐龙离开了那块板子，就需要重新检测
+ 371   2            goto checkStanding;
+ 372   2        }
+ 373   1        else
+ 374   1        {
+ 375   2        checkStanding:
+ 376   2          // 碰撞检测，判断小恐龙是否站在小板块上
+ 377   2          for (i = 0; i < BLOCK_NUMBER; i++)
+ 378   2          {
+ 379   3            if ((konglongBo.y + 16) > blocks[i].y)
+ 380   3              diff = (konglongBo.y + 16) - blocks[i].y;
+ 381   3            else
+ 382   3              diff = blocks[i].y - (konglongBo.y + 16);
+ 383   3            if (diff <= 3 &&
+ 384   3              (konglongBo.x + 10 >= blocks[i].x && konglongBo.x <= (blocks[i].x + 15)))
+ 385   3            {
+ 386   4              konglongBo.vertical_direction = DIR_UP;
+ 387   4              // 让小恐龙的 y 坐标与板块保持一直
+ 388   4              konglongBo.y = blocks[i].y - 16;
+ 389   4              standingFlag = i;
+ 390   4              break;
+ 391   4            }
+ 392   3          }
+ 393   2          // 如果发现小恐龙没有站在任何小板块上，则让小恐龙一直下落
+ 394   2          konglongBo.standingBlock = standingFlag;
+ 395   2          if (konglongBo.standingBlock == -1)
+ 396   2          {
+ 397   3            konglongBo.vertical_direction = DIR_DOWN;
+ 398   3          }
+ 399   2        }
+ 400   1      skipCheckStanding:;
+ 401   1      }
+ 402          
+ 403          /**
+ 404           * @brief 检测是否碰到小刺
+ 405           *
+ 406           */
+ 407          void checkStandingThurn()
+ 408          {
+ 409   1        uint8 diff;
+ 410   1        if ((konglongBo.y + 16) > thurnBlock.y)
+ 411   1          diff = (konglongBo.y + 16) - thurnBlock.y;
+ 412   1        else
+ 413   1          diff = thurnBlock.y - (konglongBo.y + 16);
+ 414   1        if (diff <= 3 &&
+ 415   1          (konglongBo.x + 10 >= thurnBlock.x && konglongBo.x <= (thurnBlock.x + 15)))
+ 416   1        {
+ 417   2          gameStatus = STATUS_LOSE;
+ 418   2        }
+ 419   1      }
+ 420          
+ 421          /**
+ 422           * @brief 更新小恐龙横坐标
+ 423           *
+ 424           */
+ 425          void updataKonglongHorizonPos()
+ 426          {
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 8   
+
+ 427   1        //  更新小恐龙水平位移
+ 428   1        switch (konglongBo.horizon_direction)
+ 429   1        {
+ 430   2        case DIR_LEFT: // 向左
+ 431   2          if (konglongBo.x > KONGLONG_MIN_X)
+ 432   2          {
+ 433   3            --konglongBo.x;
+ 434   3            // 移动后需要检查是否站在小板块上面
+ 435   3            onCheckStanding = 1;
+ 436   3          }
+ 437   2          break;
+ 438   2        case DIR_RIGHT: // 向右
+ 439   2          if (konglongBo.x < 111)
+ 440   2          {
+ 441   3            ++konglongBo.x;
+ 442   3            // 移动后需要检查是否站在小板块上面
+ 443   3            onCheckStanding = 1;
+ 444   3          }
+ 445   2          break;
+ 446   2        default:
+ 447   2          break;
+ 448   2        }
+ 449   1      }
+ 450          
+ 451          /**
+ 452           * @brief 更新小恐龙纵坐标
+ 453           *
+ 454           */
+ 455          void updataKonglongVerticalPos()
+ 456          {
+ 457   1        // 更新小恐龙垂直位移
+ 458   1        switch (konglongBo.vertical_direction)
+ 459   1        {
+ 460   2        case DIR_UP: // 向上
+ 461   2          if (konglongBo.standingBlock != -1)
+ 462   2          {
+ 463   3            konglongBo.y = blocks[konglongBo.standingBlock].y - 16;
+ 464   3            // 如果恐龙的 y 比 1 小，说明我们输了
+ 465   3            if (konglongBo.y < BLOCK_MIN_Y)
+ 466   3            {
+ 467   4              gameStatus = STATUS_LOSE;
+ 468   4            }
+ 469   3          }
+ 470   2          break;
+ 471   2        case DIR_DOWN: // 向下
+ 472   2          if (konglongBo.y < KONGLONG_MAX_Y)
+ 473   2          {
+ 474   3            ++konglongBo.y;
+ 475   3            // 移动后需要检查是否站在小板块上面
+ 476   3            onCheckStanding = 1;
+ 477   3          }
+ 478   2          else
+ 479   2            // 如果恐龙的 y 比 规定的y最大值 大，说明我们输了
+ 480   2            gameStatus = STATUS_LOSE;
+ 481   2          break;
+ 482   2        default:
+ 483   2          break;
+ 484   2        }
+ 485   1      }
+ 486          
+ 487          /**
+ 488           * @brief 更新小板块
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 9   
+
+ 489           *
+ 490           */
+ 491          void updateBlockPos()
+ 492          {
+ 493   1        data uint8 i;
+ 494   1        for (i = 0; i < BLOCK_NUMBER; i++)
+ 495   1        {
+ 496   2          if (blocks[i].y > BLOCK_MIN_Y)
+ 497   2            --blocks[i].y;
+ 498   2          // 回收小板块
+ 499   2          else
+ 500   2          {
+ 501   3            clearObject(blocks[i].x, blocks[i].y);
+ 502   3            onRedrawRoof = 1;
+ 503   3            // 重置小板块的 y
+ 504   3            blocks[i].x = blockHorizonPos[(currentHorizonPos++) % BLOCK_HORIZON_POS_MAX];
+ 505   3            blocks[i].y = BLCOK_MAX_Y + 53;
+ 506   3      
+ 507   3            // 每 5 个小板块加 1 分
+ 508   3            if (i == 4)
+ 509   3            {
+ 510   4              ++gameScores;
+ 511   4              onScore = 1;
+ 512   4            }
+ 513   3          }
+ 514   2        }
+ 515   1        // 移动后需要检查是否站在小板块上面
+ 516   1        onCheckStanding = 1;
+ 517   1      }
+ 518          
+ 519          /**
+ 520           * @brief 刷新小刺
+ 521           *
+ 522           */
+ 523          void generateThurn()
+ 524          {
+ 525   1        thurnBlock.x = blockHorizonPos[(currentHorizonPos++) % BLOCK_HORIZON_POS_MAX];
+ 526   1        thurnBlock.y = BLCOK_MAX_Y + 51;
+ 527   1        thurnShow = 1;
+ 528   1      }
+ 529          
+ 530          /**
+ 531           * @brief 更新小刺坐标
+ 532           *
+ 533           */
+ 534          void updateThurnPos()
+ 535          {
+ 536   1        if (thurnBlock.y > BLOCK_MIN_Y)
+ 537   1        {
+ 538   2          --thurnBlock.y;
+ 539   2        }
+ 540   1        else
+ 541   1        {
+ 542   2          clearObject(thurnBlock.x, thurnBlock.y);
+ 543   2          onRedrawRoof = 1;
+ 544   2          // 小刺消失
+ 545   2          thurnShow = 0;
+ 546   2        }
+ 547   1      }
+ 548          
+ 549          /**
+ 550           * @brief 开始界面
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 10  
+
+ 551           *
+ 552           */
+ 553          void startScreen()
+ 554          {
+ 555   1        // 通知主函数更新屏幕
+ 556   1        bit updateScreen = 1;
+ 557   1        bit updateOptions = 0;
+ 558   1        // 咕叽选中的选项
+ 559   1        uint8 options = 0;
+ 560   1        // 用于暂存图像数据的数组
+ 561   1        uint8 image[8];
+ 562   1        // 用于遍历
+ 563   1        uint8 i;
+ 564   1        monitorLight = 1;
+ 565   1        // 绘制小恐龙封面
+ 566   1        play32(25, 2, img_konglong_large);
+ 567   1      
+ 568   1        // 按下 Key2 则加载游戏
+ 569   1        while (KeyIn2)
+ 570   1        {
+ 571   2          // 按下 key1 切换
+ 572   2          if (!KeyIn1)
+ 573   2          {
+ 574   3            delay(500);
+ 575   3            if (KeyIn1)
+ 576   3              continue;
+ 577   3            monitorLight = 0;
+ 578   3            // 更新选项
+ 579   3            options = (options + 1) % 2;
+ 580   3            // 更新屏幕
+ 581   3            updateScreen = 1;
+ 582   3          }
+ 583   2      
+ 584   2          // 当 update screen 为 1 才会重画屏幕
+ 585   2          if (updateScreen)
+ 586   2          {
+ 587   3            switch (options)
+ 588   3            {
+ 589   4            case 0: // 选中“开始"
+ 590   4              // 先涂黑
+ 591   4              {
+ 592   5                drawDark(64, 3);
+ 593   5                drawDark(81, 3);
+ 594   5                // 然后显示"开始"
+ 595   5                for (i = 0; i < 8; i++)
+ 596   5                {
+ 597   6                  image[i] = ~img_kai[i];
+ 598   6                }
+ 599   5                play8(65, 3, image);
+ 600   5                for (i = 0; i < 8; i++)
+ 601   5                {
+ 602   6                  image[i] = ~img_shi[i];
+ 603   6                }
+ 604   5                play8(73, 3, image);
+ 605   5                // 显示 "记录"
+ 606   5                clearLine(64, 40);
+ 607   5                clearLine(81, 40);
+ 608   5                play8(65, 5, img_ji);
+ 609   5                play8(73, 5, img_lu);
+ 610   5              }
+ 611   4              break;
+ 612   4            case 1: // 选中"结束"
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 11  
+
+ 613   4            {   // 先涂黑
+ 614   5              drawDark(64, 5);
+ 615   5              drawDark(81, 5);
+ 616   5              // 然后显示"记录"
+ 617   5              for (i = 0; i < 8; i++)
+ 618   5              {
+ 619   6                image[i] = ~img_ji[i];
+ 620   6              }
+ 621   5              play8(65, 5, image);
+ 622   5              for (i = 0; i < 8; i++)
+ 623   5              {
+ 624   6                image[i] = ~img_lu[i];
+ 625   6              }
+ 626   5              play8(73, 5, image);
+ 627   5              // 显示 "开始"
+ 628   5              clearLine(64, 24);
+ 629   5              clearLine(81, 24);
+ 630   5              play8(65, 3, img_kai);
+ 631   5              play8(73, 3, img_shi);
+ 632   5            }
+ 633   4            break;
+ 634   4            default:
+ 635   4              break;
+ 636   4            }
+ 637   3            updateScreen = 0;
+ 638   3          }
+ 639   2        }
+ 640   1        clear12864();
+ 641   1        delay(500);
+ 642   1      }
+ 643          
+ 644          /**
+ 645           * @brief 结束界面
+ 646           *
+ 647           */
+ 648          void endScreen()
+ 649          {
+ 650   1        // 结束
+ 651   1        play16(20, 2, img_jie);
+ 652   1        play16(38, 2, img_shu);
+ 653   1      
+ 654   1        // 重来
+ 655   1        play16(20, 4, img_chong);
+ 656   1        play16(38, 4, img_lai);
+ 657   1      
+ 658   1        // 保存
+ 659   1        play16(64, 4, img_bao);
+ 660   1        play16(81, 4, img_cun);
+ 661   1      
+ 662   1        // 延迟 3 ms
+ 663   1        delay(3000);
+ 664   1      
+ 665   1        while (1)
+ 666   1        {
+ 667   2          if (!KeyIn2)
+ 668   2          {
+ 669   3            delay(300);
+ 670   3            if (!KeyIn2)
+ 671   3              return;
+ 672   3          }
+ 673   2        }
+ 674   1      }
+C51 COMPILER V9.60.7.0   MAIN                                                              06/17/2023 22:15:41 PAGE 12  
+
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    815    ----
+   CODE SIZE        =   1544    ----
    CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =     38    ----
+   XDATA SIZE       =    390      10
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     24       6
+   DATA SIZE        =     26       6
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =      5    ----
+   BIT SIZE         =      9       2
 END OF MODULE INFORMATION.
 
 
