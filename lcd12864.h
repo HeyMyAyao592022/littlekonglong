@@ -35,13 +35,22 @@ void play8(uint8 x, uint8 y, uint8 *addr);
 void play16(uint8 x, uint8 y, uint8 *addr);
 
 /**
+ * @brief 显示数字
+ *
+ * @param x
+ * @param y
+ * @param num
+ */
+void playNums(uint8 x, uint8 y, uint8 num);
+
+/**
  * @brief 展示 32*32 大小的图片
  *
  * @param x
  * @param y
  * @param addr
  */
-void play32(uint8 x, uint8 y, uint8 *addr);
+// void play32(uint8 x, uint8 y, uint8 *addr);
 
 /**
  * @brief 单纯画一片黑色
@@ -49,7 +58,7 @@ void play32(uint8 x, uint8 y, uint8 *addr);
  * @param x
  * @param y
  */
-void drawDark(uint8 x, uint8 y);
+void drawDark(uint8 x, uint8 y, uint8 dark);
 
 /**
  * @brief 清楚制定位置的图像
@@ -97,11 +106,11 @@ void drawKonglong(KongLong *konglong);
 void drawPanel();
 
 /**
- * @brief 显示分数
+ * @brief 显示分
  *
  * @param score
  */
-void updateScores(uint8 score);
+void updateScores(uint8 scores);
 
 /**
  * @brief 绘制顶部

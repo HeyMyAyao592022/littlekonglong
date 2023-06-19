@@ -2,6 +2,8 @@
 #include "konglong.h"
 #include "lcd12864.h"
 #include "imgarr.h"
+#include "eeprom.h"
+#include "ds1302.h"
 // #include "seqqueue.h"
 
 sbit monitorLight = P3 ^ 3;
@@ -68,7 +70,7 @@ void endScreen();
 
 /// @brief 游戏的状态
 data uint8 gameStatus = STATUS_RUNNING;
-data uint8 gameScores = 12;
+data uint8 gameScores = 0;
 
 /// @brief 小恐龙
 data KongLong konglongBo = {KONGLONG_MIN_X, BLCOK_MAX_Y - 16, img_konglong,
@@ -82,6 +84,10 @@ data Block blocks[] = {
 	{65, BLCOK_MAX_Y + 117},
 	{88, BLCOK_MAX_Y + 151}};
 
+/// @brief 代表本次是第几次游戏
+data uint8 gamePlayTimes = 0;
+data uint8 preScores = 0;
+
 /// @brief 定时器计数
 data uint8 counter1 = 1;
 data uint8 counter2 = 1;
@@ -94,6 +100,7 @@ data bit onRedrawRoof = 1;
 data bit onCheckStanding = 1;
 data bit onPanel = 1;
 data bit onScore = 1;
+data bit onClear = 0;
 
 /// @brief 小刺出现的信号
 data bit onThurn = 0;
@@ -112,140 +119,153 @@ void main(void)
 	// 遍历
 	data uint8 i;
 
-	// 初始化定时器
-	initializeTimer();
+	// 初始化 eeprom
+	init_eeprom();
+	// 读取数据
+	read_eeprom(&gameScores, &preScores);
 
 	// 初始化屏幕
 	LCD_init();
 	delay(5);
 
-	while (1)
+	// 启动界面
+	startScreen();
+
+	// 初始化时钟
+	set_time();
+
+	// 初始化定时器
+	initializeTimer();
+
+	// 只要游戏还在运行中，那就不退出循环
+	// game statues 为 0 则说明在运行中
+	while (!gameStatus)
 	{
-		// 启动界面
-		startScreen();
-
-		// 只要游戏还在运行中，那就不退出循环
-		// game statues 为 0 则说明在运行中
-		while (!gameStatus)
+		//  绘图
+		if (konglongBo.standingBlock != -1)
 		{
-			//  绘图
-			if (konglongBo.standingBlock != -1)
-			{
-				drawBlock(blocks[konglongBo.standingBlock].x, blocks[konglongBo.standingBlock].y,
-						  1);
-			}
-			drawKonglong(&konglongBo);
-			for (i = 0; i < BLOCK_NUMBER; i++)
-			{
-				if ((i != (konglongBo.standingBlock)) && (blocks[i].y <= BLCOK_MAX_Y))
-					drawBlock(blocks[i].x, blocks[i].y, blocks[i].y <= 7);
-			}
+			drawBlock(blocks[konglongBo.standingBlock].x, blocks[konglongBo.standingBlock].y,
+					  1);
+		}
+		drawKonglong(&konglongBo);
+		for (i = 0; i < BLOCK_NUMBER; i++)
+		{
+			if ((i != (konglongBo.standingBlock)) && (blocks[i].y <= BLCOK_MAX_Y))
+				drawBlock(blocks[i].x, blocks[i].y, blocks[i].y <= 7);
+		}
 
-			// 绘制小刺
+		// 绘制小刺
+		if (thurnShow)
+		{
+			if (thurnBlock.y <= BLCOK_MAX_Y)
+				drawThurn(thurnBlock.x, thurnBlock.y);
+		}
+
+		// 绘制表盘
+		if (onPanel)
+		{
+			onPanel = 0;
+			drawPanel();
+		}
+
+		// 绘制边界
+		if (onRedrawRoof)
+		{
+			onRedrawRoof = 0;
+			drawRoof();
+		}
+
+		// 更新分数
+		if (onScore)
+		{
+			onScore = 0;
+			if (gameScores <= 99)
+				updateScores(gameScores);
+		}
+
+		// 扫码按键
+		if (!KeyIn1) // 向左
+		{
+			// 改变方向，则需要清除残影
+			if (konglongBo.towards == DIR_RIGHT)
+			{
+				clearLine(konglongBo.x, konglongBo.y);
+			}
+			konglongBo.horizon_direction = DIR_LEFT;
+			konglongBo.towards = DIR_LEFT;
+		}
+		else if (!KeyIn2) // 向右
+		{
+			// 改变方向，则需要清除残影
+			if (konglongBo.towards == DIR_LEFT)
+			{
+				clearLine(konglongBo.x, konglongBo.y);
+			}
+			konglongBo.horizon_direction = DIR_RIGHT;
+			konglongBo.towards = DIR_RIGHT;
+		}
+		else
+			konglongBo.horizon_direction = DIR_STILL;
+
+		// 检查小恐龙是否站在小板块上面
+		if (onCheckStanding)
+		{
+			onCheckStanding = 0;
+			checkStandingBlock();
+
+			// 如果小刺出现，那也检测小刺
 			if (thurnShow)
 			{
-				if (thurnBlock.y <= BLCOK_MAX_Y)
-					drawThurn(thurnBlock.x, thurnBlock.y);
-			}
-
-			// 绘制表盘
-			if (onPanel)
-			{
-				onPanel = 0;
-				drawPanel();
-			}
-
-			// 绘制边界
-			if (onRedrawRoof)
-			{
-				onRedrawRoof = 0;
-				drawRoof();
-			}
-
-			// 更新分数
-			if (onScore)
-			{
-				onScore = 0;
-				if (gameScores <= 99)
-					updateScores(gameScores);
-			}
-
-			// 扫码按键
-			if (!KeyIn1) // 向左
-			{
-				// 改变方向，则需要清除残影
-				if (konglongBo.towards == DIR_RIGHT)
-				{
-					clearLine(konglongBo.x, konglongBo.y);
-				}
-				konglongBo.horizon_direction = DIR_LEFT;
-				konglongBo.towards = DIR_LEFT;
-			}
-			else if (!KeyIn2) // 向右
-			{
-				// 改变方向，则需要清除残影
-				if (konglongBo.towards == DIR_LEFT)
-				{
-					clearLine(konglongBo.x, konglongBo.y);
-				}
-				konglongBo.horizon_direction = DIR_RIGHT;
-				konglongBo.towards = DIR_RIGHT;
-			}
-			else
-				konglongBo.horizon_direction = DIR_STILL;
-
-			// 检查小恐龙是否站在小板块上面
-			if (onCheckStanding)
-			{
-				onCheckStanding = 0;
-				checkStandingBlock();
-
-				// 如果小刺出现，那也检测小刺
-				if (thurnShow)
-				{
-					checkStandingThurn();
-				}
-			}
-
-			// 更新小恐龙 x 坐标
-			if (onUpdateKonglong1)
-			{
-				onUpdateKonglong1 = 0;
-				updataKonglongHorizonPos();
-			}
-
-			// 更新小恐龙 y 坐标
-			if (onUpdateKonglong2)
-			{
-				onUpdateKonglong2 = 0;
-				updataKonglongVerticalPos();
-			}
-
-			// 更新小板块坐标
-			if (onUpdateBlock)
-			{
-				onUpdateBlock = 0;
-				updateBlockPos();
-
-				// 如果小刺出现，那也更新小刺的坐标
-				if (thurnShow)
-				{
-					updateThurnPos();
-				}
-			}
-
-			// 更新小刺
-			if (onThurn)
-			{
-				onThurn = 0;
-				generateThurn();
+				checkStandingThurn();
 			}
 		}
 
-		// 结束界面
-		clear12864();
-		endScreen();
+		// 更新小恐龙 x 坐标
+		if (onUpdateKonglong1)
+		{
+			onUpdateKonglong1 = 0;
+			updataKonglongHorizonPos();
+		}
+
+		// 更新小恐龙 y 坐标
+		if (onUpdateKonglong2)
+		{
+			onUpdateKonglong2 = 0;
+			updataKonglongVerticalPos();
+		}
+
+		// 更新小板块坐标
+		if (onUpdateBlock)
+		{
+			onUpdateBlock = 0;
+			updateBlockPos();
+
+			// 如果小刺出现，那也更新小刺的坐标
+			if (thurnShow)
+			{
+				updateThurnPos();
+			}
+		}
+
+		// 更新小刺
+		if (onThurn)
+		{
+			onThurn = 0;
+			generateThurn();
+		}
+
+		// 清屏
+		if (onClear)
+		{
+			onClear = 0;
+			clear12864();
+			onPanel = 1;
+			onScore = 1;
+		}
 	}
+
+	// 结束界面
+	endScreen();
 }
 
 /**
@@ -325,12 +345,12 @@ void onTimer2() interrupt 3
 {
 	++counter2;
 
-	if (!(counter2 % 50))
+	if (!(counter2 % 60))
 	{
 		onRedrawRoof = 1;
 	}
 
-	if (!(counter2 % 150))
+	if (!(counter2 % 20))
 	{
 		onPanel = 1;
 		onScore = 1;
@@ -501,7 +521,8 @@ void updateBlockPos()
 			clearObject(blocks[i].x, blocks[i].y);
 			onRedrawRoof = 1;
 			// 重置小板块的 y
-			blocks[i].x = blockHorizonPos[(currentHorizonPos++) % BLOCK_HORIZON_POS_MAX];
+			currentHorizonPos = (currentHorizonPos + 1) % BLOCK_HORIZON_POS_MAX;
+			blocks[i].x = blockHorizonPos[currentHorizonPos];
 			blocks[i].y = BLCOK_MAX_Y + 53;
 
 			// 每 5 个小板块加 1 分
@@ -522,8 +543,9 @@ void updateBlockPos()
  */
 void generateThurn()
 {
-	thurnBlock.x = blockHorizonPos[(currentHorizonPos++) % BLOCK_HORIZON_POS_MAX];
-	thurnBlock.y = BLCOK_MAX_Y + 51;
+	currentHorizonPos = (currentHorizonPos + 1) % BLOCK_HORIZON_POS_MAX;
+	thurnBlock.x = blockHorizonPos[currentHorizonPos];
+	thurnBlock.y = BLCOK_MAX_Y + 71;
 	thurnShow = 1;
 }
 
@@ -552,93 +574,32 @@ void updateThurnPos()
  */
 void startScreen()
 {
-	// 通知主函数更新屏幕
-	bit updateScreen = 1;
-	bit updateOptions = 0;
-	// 咕叽选中的选项
-	uint8 options = 0;
-	// 用于暂存图像数据的数组
-	uint8 image[8];
 	// 用于遍历
-	uint8 i;
-	monitorLight = 1;
 	// 绘制小恐龙封面
-	play32(25, 2, img_konglong_large);
+	play16(46, 3, img_flags);
+	// 绘制“开始”
+	drawDark(53, 6, 0xff);
+	drawDark(74, 6, 0xff);
+	play8(54, 6, img_kai);
+	play8(65, 6, img_shi);
+	// // 绘制游戏次数
+	playNums(65, 3, gamePlayTimes);
 
-	// 按下 Key2 则加载游戏
-	while (KeyIn2)
+	// 按下 Key3 则加载游戏
+	while (KeyIn3)
 	{
 		// 按下 key1 切换
-		if (!KeyIn1)
+		if (!KeyIn3)
 		{
 			delay(500);
-			if (KeyIn1)
-				continue;
-			monitorLight = 0;
-			// 更新选项
-			options = (options + 1) % 2;
-			// 更新屏幕
-			updateScreen = 1;
-		}
-
-		// 当 update screen 为 1 才会重画屏幕
-		if (updateScreen)
-		{
-			switch (options)
-			{
-			case 0: // 选中“开始"
-				// 先涂黑
-				{
-					drawDark(64, 3);
-					drawDark(81, 3);
-					// 然后显示"开始"
-					for (i = 0; i < 8; i++)
-					{
-						image[i] = ~img_kai[i];
-					}
-					play8(65, 3, image);
-					for (i = 0; i < 8; i++)
-					{
-						image[i] = ~img_shi[i];
-					}
-					play8(73, 3, image);
-					// 显示 "记录"
-					clearLine(64, 40);
-					clearLine(81, 40);
-					play8(65, 5, img_ji);
-					play8(73, 5, img_lu);
-				}
+			if (KeyIn3)
 				break;
-			case 1: // 选中"结束"
-			{		// 先涂黑
-				drawDark(64, 5);
-				drawDark(81, 5);
-				// 然后显示"记录"
-				for (i = 0; i < 8; i++)
-				{
-					image[i] = ~img_ji[i];
-				}
-				play8(65, 5, image);
-				for (i = 0; i < 8; i++)
-				{
-					image[i] = ~img_lu[i];
-				}
-				play8(73, 5, image);
-				// 显示 "开始"
-				clearLine(64, 24);
-				clearLine(81, 24);
-				play8(65, 3, img_kai);
-				play8(73, 3, img_shi);
-			}
-			break;
-			default:
-				break;
-			}
-			updateScreen = 0;
+			;
 		}
 	}
 	clear12864();
-	delay(500);
+	clear12864();
+	delay(1000);
 }
 
 /**
@@ -647,28 +608,32 @@ void startScreen()
  */
 void endScreen()
 {
+	// 接收时钟
+	Time time1;
+
+	clear12864();
+	clear12864();
+	delay(1000);
+
 	// 结束
-	play16(20, 2, img_jie);
-	play16(38, 2, img_shu);
+	play16(30, 2, img_konglong);
+	playNums(65, 2, gameScores);
 
-	// 重来
-	play16(20, 4, img_chong);
-	play16(38, 4, img_lai);
+	// 更新分数
+	if (preScores < gameScores)
+		write_eeprom(gameScores, gamePlayTimes + 1);
 
-	// 保存
-	play16(64, 4, img_bao);
-	play16(81, 4, img_cun);
+	// 读取时钟
+	read_time((uint8 *)&time1);
+	// 显示数据
+	playNums(28, 5, time1.min);
+	drawDark(65, 5, 0x18);
+	playNums(66, 5, time1.sec);
 
 	// 延迟 3 ms
 	delay(3000);
 
 	while (1)
 	{
-		if (!KeyIn2)
-		{
-			delay(300);
-			if (!KeyIn2)
-				return;
-		}
 	}
 }
